@@ -2432,7 +2432,7 @@ function renderStartScreen() {
       </div>
     </div>
     <div class="footer">
-      <p>F1 Career Simulator v1.0</p>
+      <p>F1 Career Simulator v2.6</p>
       <p style="margin-top:4px">一款文字模拟游戏 · 数据基于2025赛季</p>
     </div>
   `;
