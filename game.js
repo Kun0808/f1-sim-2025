@@ -254,6 +254,12 @@ const NEWS_TEMPLATES = [
   { title: '围场趣闻', body: () => 'Leclerc在摩纳哥站前夕发布了一段钢琴演奏视频，配文"为家乡准备的小礼物"。' },
   { title: '围场趣闻', body: () => '一位F1记者试图数清Alonso到底有多少条"El Plan"，最后放弃了。' },
   { title: '围场趣闻', body: () => 'Stroll在停车场撞了自己的赛车，车队公关紧急声明"这只是友情碰撞测试"。' },
+  // 领队新闻
+  { title: '领队动态', body: () => 'Horner在记者会上妙语连珠，让在场记者集体鼓掌。' },
+  { title: '领队动态', body: () => 'Toto Wolff表示"我们不会在压力下做出草率决定"，但他的表情出卖了他。' },
+  { title: '领队动态', body: () => 'Vasseur被拍到和车手在围场散步聊天，看起来关系融洽。' },
+  { title: '领队动态', body: () => '一位车队领队在赛后怒摔耳机，被摄像机完美捕捉。' },
+  { title: '领队动态', body: () => 'Stella用数据说服了董事会追加研发预算，工程师们欢呼雀跃。' },
 ];
 
 // ============ RANDOM RACE EVENTS ============
@@ -480,9 +486,238 @@ const RANDOM_EVENTS = [
       { label: 'C', text: '在采访中回击赞助商 - 赛车不是做生意', effect: { fanPop: 6, mediaRep: -3, sponsorRep: -5, teamTrust: -4 } },
     ],
   },
+  {
+    title: '🤝 车手好友相助',
+    desc: '你的一位好友车手在赛道上给你让了位置，帮你保住了积分。围场友谊的力量！',
+    type: 'social',
+    options: [
+      { label: 'A', text: '赛后感谢对方 - 友谊长存', effect: { consistency: 2, raceIQ: 1, driverRep: 3 } },
+      { label: 'B', text: '下次也帮他 - 礼尚往来', effect: { raceIQ: 2, driverRep: 2, pace: 1 } },
+    ],
+  },
+  {
+    title: '😤 车手敌对冲突',
+    desc: '一位与你关系不好的车手在赛道上恶意阻挡你，你损失了大量时间。',
+    type: 'social',
+    options: [
+      { label: 'A', text: '无线电投诉 - 要求赛会处罚', effect: { raceIQ: 2, mediaRep: -1, driverRep: -2 } },
+      { label: 'B', text: '下次找机会回敬 - 围场有仇必报', effect: { attack: 3, risk: 2, driverRep: -3 } },
+      { label: 'C', text: '专注于超越他 - 用速度说话', effect: { pace: 3, attack: 2, raceIQ: 1 } },
+    ],
+  },
+  {
+    title: '🍻 围场聚餐',
+    desc: '几位车手邀请你参加围场聚餐，这是一个增进关系的好机会。',
+    type: 'social',
+    options: [
+      { label: 'A', text: '积极参加 - 多交朋友', effect: { driverRep: 4, fanPop: 2, mediaRep: 1, consistency: -1 } },
+      { label: 'B', text: '婉拒 - 专注于比赛准备', effect: { raceIQ: 3, consistency: 2, driverRep: -1 } },
+      { label: 'C', text: '只和队友去 - 保持距离', effect: { teamTrust: 3, driverRep: 1 } },
+    ],
+  },
 ];
 
-// ============ RACE DECISIONS ============
+// ============ DRIVER SOCIAL SYSTEM ============
+
+// Team principals with personalities
+const TEAM_PRINCIPALS = [
+  { teamIdx: 0, name: 'Andrea Stella', style: 'analytical', desc: '数据驱动型，注重长期发展' },
+  { teamIdx: 1, name: 'Christian Horner', style: 'aggressive', desc: '强势谈判者，赢家心态' },
+  { teamIdx: 2, name: 'Toto Wolff', style: 'strategic', desc: '商业头脑，精于算计' },
+  { teamIdx: 3, name: 'Frédéric Vasseur', style: 'passionate', desc: '热情直率，车手至上' },
+  { teamIdx: 4, name: 'Andy Cowell', style: 'technical', desc: '工程师出身，细节控' },
+  { teamIdx: 5, name: 'James Vowles', style: 'patient', desc: '耐心建设者，重承诺' },
+  { teamIdx: 6, name: 'Laurent Mekies', style: 'pragmatic', desc: '实用主义者，结果导向' },
+  { teamIdx: 7, name: 'Ayao Komatsu', style: 'honest', desc: '坦诚直接，不喜欢花招' },
+  { teamIdx: 8, name: 'Oliver Oakes', style: 'ambitious', desc: '年轻有为，敢赌敢拼' },
+  { teamIdx: 9, name: 'Mattia Binotto', style: 'conservative', desc: '保守稳重，按部就班' },
+];
+
+// Initialize driver relationships
+function initDriverRelationships() {
+  if (gameState.driverRelationships) return;
+  gameState.driverRelationships = {};
+  gameState.drivers.forEach(d => {
+    if (!d.isPlayer) {
+      // Teammate starts higher, others random
+      const isTeammate = d.teamIdx === gameState.teamIdx;
+      gameState.driverRelationships[d.name] = isTeammate ? 40 + Math.floor(Math.random() * 20) : 20 + Math.floor(Math.random() * 30);
+    }
+  });
+}
+
+// Get relationship level text
+function getRelationshipLevel(val) {
+  if (val >= 80) return { label: '挚友', color: 'var(--green)', icon: '💚' };
+  if (val >= 60) return { label: '好友', color: 'var(--green)', icon: '🤝' };
+  if (val >= 40) return { label: '熟人', color: 'var(--blue)', icon: '😐' };
+  if (val >= 20) return { label: '冷淡', color: 'var(--orange)', icon: '🙄' };
+  return { label: '敌对', color: 'var(--f1-red)', icon: '😤' };
+}
+
+// Change relationship
+function changeRelationship(driverName, delta) {
+  if (!gameState.driverRelationships) initDriverRelationships();
+  if (gameState.driverRelationships[driverName] === undefined) {
+    gameState.driverRelationships[driverName] = 30;
+  }
+  gameState.driverRelationships[driverName] = Math.max(0, Math.min(100, gameState.driverRelationships[driverName] + delta));
+}
+
+// Social interaction options
+const SOCIAL_ACTIONS = [
+  { id: 'dinner', name: '一起晚餐', cost: 2, desc: '邀请车手共进晚餐，增进感情', repGain: 8 },
+  { id: 'gym', name: '一起训练', cost: 0, desc: '邀请车手一起体能训练', repGain: 5 },
+  { id: 'sim_racing', name: '模拟器对战', cost: 1, desc: '在线上模拟器赛一局', repGain: 6 },
+  { id: 'gift', name: '送礼物', cost: 5, desc: '送一份精心挑选的礼物', repGain: 12 },
+  { id: 'interview', name: '公开赞扬', cost: 0, desc: '在采访中公开称赞对方', repGain: 4, mediaCost: true },
+];
+
+function renderSocial() {
+  showScreen('sponsor-screen'); // Reuse sponsor-screen as generic screen
+  initDriverRelationships();
+  const container = document.getElementById('sponsor-screen');
+  const player = getPlayer();
+
+  // Sort drivers by relationship (highest first), exclude player
+  const otherDrivers = gameState.drivers
+    .filter(d => !d.isPlayer)
+    .map(d => ({
+      driver: d,
+      rel: gameState.driverRelationships[d.name] || 30,
+      isTeammate: d.teamIdx === gameState.teamIdx,
+    }))
+    .sort((a, b) => b.rel - a.rel);
+
+  container.innerHTML = `
+    <button class="back-btn" onclick="renderHub()">← 返回主页</button>
+    <div class="section-header">
+      <h2 class="font-display">🤝 车手社交</h2>
+    </div>
+    <div class="card" style="padding:12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+      <div style="font-size:0.85rem;color:var(--text-secondary);">与围场车手建立关系，高亲密度可能影响转会和赛事事件</div>
+      <div style="font-size:0.85rem;color:var(--green);font-weight:700;">💵 $${(gameState.money || 0).toFixed(1)}M</div>
+    </div>
+    <div style="display:grid;gap:10px;">
+      ${otherDrivers.map(({ driver, rel, isTeammate }) => {
+        const level = getRelationshipLevel(rel);
+        const team = TEAMS[driver.teamIdx];
+        return `
+          <div class="card" style="padding:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <div>
+                <span style="font-weight:700;">${driver.name}</span>
+                ${isTeammate ? '<span style="font-size:0.7rem;color:var(--blue);margin-left:6px;">队友</span>' : ''}
+                <span class="team-badge ${team.css}" style="font-size:0.7rem;padding:2px 6px;margin-left:6px;">${team.short}</span>
+              </div>
+              <div style="font-size:0.85rem;">
+                ${level.icon} <span style="color:${level.color};font-weight:600;">${level.label}</span>
+                <span style="color:var(--text-muted);margin-left:4px;">${rel}</span>
+              </div>
+            </div>
+            <div class="stat-bar-bg" style="height:6px;margin-bottom:8px;">
+              <div class="stat-bar-fill" style="width:${rel}%;background:${level.color};"></div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              ${SOCIAL_ACTIONS.map(a => `
+                <button class="btn" style="font-size:0.75rem;padding:4px 10px;${(gameState.money || 0) < a.cost ? 'opacity:0.4;cursor:not-allowed;' : ''}"
+                  ${(gameState.money || 0) < a.cost ? 'disabled' : `onclick="doSocial('${driver.name}', '${a.id}')"`}>
+                  ${a.name} ${a.cost > 0 ? '$' + a.cost + 'M' : '免费'}
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function doSocial(driverName, actionId) {
+  const action = SOCIAL_ACTIONS.find(a => a.id === actionId);
+  if (!action) return;
+  if ((gameState.money || 0) < action.cost) {
+    showToast('余额不足！', 'error');
+    return;
+  }
+
+  gameState.money -= action.cost;
+  const oldRel = gameState.driverRelationships[driverName] || 30;
+  const gain = action.repGain + Math.floor(Math.random() * 4 - 2); // ±2 randomness
+  changeRelationship(driverName, gain);
+  const newRel = gameState.driverRelationships[driverName];
+
+  // High relationship bonus effects
+  let bonusText = '';
+  if (oldRel < 60 && newRel >= 60) {
+    bonusText = ' 🎉 你们成为了好友！';
+    gameState.reputation.driverRespect = Math.min(100, (gameState.reputation.driverRespect || 0) + 3);
+  } else if (oldRel < 80 && newRel >= 80) {
+    bonusText = ' 🎉 你们成为了挚友！转会时可能获得帮助';
+    gameState.reputation.driverRespect = Math.min(100, (gameState.reputation.driverRespect || 0) + 5);
+  }
+
+  if (action.mediaCost) {
+    gameState.reputation.mediaRelation = Math.max(0, (gameState.reputation.mediaRelation || 0) - 2);
+  }
+
+  saveGame();
+  showToast(`${action.name} → ${driverName} 亲密度 +${gain}${bonusText}`, 'success');
+  renderSocial();
+}
+
+// ============ TEAM PRINCIPAL EVENTS ============
+
+const PRINCIPAL_EVENTS = [
+  {
+    title: '📋 领队一对一谈话',
+    desc: (p) => `${p.name} 邀请你到办公室进行一对一谈话，讨论你的未来。`,
+    type: 'principal',
+    options: [
+      { label: 'A', text: '表达忠诚 - 承诺长期效力', effect: { teamTrust: 8, driverRep: 3 }, principalMsg: '领队对你的忠诚表示赞赏' },
+      { label: 'B', text: '提出改进需求 - 要更好的赛车', effect: { teamTrust: -4, pace: 2, driverRep: -2 }, principalMsg: '领队表示会考虑你的要求' },
+      { label: 'C', text: '询问车队计划 - 了解发展方向', effect: { raceIQ: 3, teamTrust: 2 }, principalMsg: '领队分享了车队的长期规划' },
+    ],
+  },
+  {
+    title: '⚡ 领队施压',
+    desc: (p) => `${p.name} 在赛前会议上公开对你施压："本站必须拿到积分。"`,
+    type: 'principal',
+    options: [
+      { label: 'A', text: '接受挑战 - 压力就是燃料', effect: { pace: 4, attack: 2, risk: 3, consistency: -1 }, principalMsg: '领队期待你的表现' },
+      { label: 'B', text: '冷静回应 - 设定合理期望', effect: { raceIQ: 3, teamTrust: 2, consistency: 1 }, principalMsg: '领队理解了你的立场' },
+      { label: 'C', text: '反问领队 - 赛车够不够快？', effect: { teamTrust: -6, fanPop: 3, pace: 1 }, principalMsg: '领队表情不太好看' },
+    ],
+  },
+  {
+    title: '🤝 领队信任投票',
+    desc: (p) => `${p.name} 在董事会上为你投了信任票，挡住了换掉你的提议。`,
+    type: 'principal',
+    options: [
+      { label: 'A', text: '感恩 - 用成绩回报信任', effect: { pace: 3, consistency: 2, teamTrust: 5 }, principalMsg: '领队拍了拍你的肩膀' },
+      { label: 'B', text: '要求更多资源 - 既然信任我', effect: { teamTrust: -2, pace: 1, driverRep: -1 }, principalMsg: '领队提醒你不要太贪心' },
+    ],
+  },
+  {
+    title: '📢 领队媒体战',
+    desc: (p) => `${p.name} 在媒体前为你辩护，称"他是围场最有天赋的车手之一"。`,
+    type: 'principal',
+    options: [
+      { label: 'A', text: '公开感谢领队支持', effect: { mediaRep: 4, teamTrust: 4, fanPop: 2 }, principalMsg: '领队微笑回应' },
+      { label: 'B', text: '低调处理 - 用成绩说话', effect: { consistency: 3, raceIQ: 1, mediaRep: 1 }, principalMsg: '领队欣赏你的职业态度' },
+    ],
+  },
+  {
+    title: '🔄 领队暗示转会',
+    desc: (p) => `${p.name} 暗示你"如果有更好的机会，他不会阻拦"，这是在考验你还是在赶人？`,
+    type: 'principal',
+    options: [
+      { label: 'A', text: '表态留下 - 我忠于这支车队', effect: { teamTrust: 10, fanPop: 5, consistency: 2 }, principalMsg: '领队松了口气' },
+      { label: 'B', text: '试探性地询问 - 哪支车队？', effect: { raceIQ: 3, teamTrust: -5, mediaRep: -2 }, principalMsg: '领队含糊其辞' },
+      { label: 'C', text: '直接要求转会 - 时机到了', effect: { teamTrust: -15, fanPop: -3, pace: 2 }, principalMsg: '领队说"我会考虑的"' },
+    ],
+  },
+];
 
 function getRaceDecisions(raceIdx, state) {
   const track = TRACKS[raceIdx];
@@ -548,6 +783,22 @@ function getRaceDecisions(raceIdx, state) {
       { label: 'C', text: '故意加速拉开差距', effect: { teamTrust: -2, pace: 2, risk: 1 } },
     ],
   });
+
+  // Segment 3.5: Team principal event (20% chance, before segment 4)
+  if (Math.random() < 0.20) {
+    const principal = TEAM_PRINCIPALS[gameState.teamIdx];
+    const principalEvent = PRINCIPAL_EVENTS[Math.floor(Math.random() * PRINCIPAL_EVENTS.length)];
+    allDecisions.push({
+      segment: 3,
+      title: principalEvent.title,
+      desc: principalEvent.desc(principal),
+      options: principalEvent.options.map(opt => ({
+        ...opt,
+        text: opt.text + ` (${opt.principalMsg})`,
+      })),
+      isPrincipalEvent: true,
+    });
+  }
 
   // Segment 4: Late race decision - 60% chance for a second random event (different from segment 2)
   const usedEventTypes = allDecisions.filter(d => d.isRandomEvent).map(d => d.eventType);
@@ -720,7 +971,7 @@ function createNewGame(name, backgroundId, selectedTeamIdx, replaceSlot) {
     sponsor: null,
     sponsorYearsLeft: 0,
     totalEarnings: 0,
-    money: 50, // Starting balance in $M
+    money: 15, // Starting balance in $M - tight budget early on
   };
 
   return gameState;
@@ -1085,6 +1336,21 @@ function generateContractOffers() {
     // Reputation factor
     interest += (reputation - 50) * 0.2;
 
+    // Driver relationship factor - if a friend is on the team, boost interest
+    if (gameState.driverRelationships) {
+      const teammate = gameState.drivers.find(d => d.teamIdx === teamIdx && !d.isPlayer);
+      if (teammate) {
+        const rel = gameState.driverRelationships[teammate.name] || 30;
+        if (rel >= 80) {
+          interest += 15; // Close friend recommends you to their team
+        } else if (rel >= 60) {
+          interest += 8;
+        } else if (rel < 20) {
+          interest -= 10; // Enemy blocks your transfer
+        }
+      }
+    }
+
     // Random factor
     interest += (Math.random() - 0.5) * 20;
 
@@ -1325,7 +1591,7 @@ function loadGame() {
       if (gameState.underdogPodium === undefined) gameState.underdogPodium = 0;
       if (gameState.sponsor === undefined) gameState.sponsor = null;
       if (gameState.totalEarnings === undefined) gameState.totalEarnings = 0;
-      if (gameState.money === undefined) gameState.money = 50;
+      if (gameState.money === undefined) gameState.money = 15;
       if (gameState.sponsorYearsLeft === undefined) gameState.sponsorYearsLeft = 0;
       return true;
     }
@@ -1618,7 +1884,7 @@ function createGameAsExistingDriver(driverIdx) {
     sponsor: null,
     sponsorYearsLeft: 0,
     totalEarnings: 0,
-    money: 50,
+    money: 15,
   };
 
   showScreen('hub-screen');
@@ -1906,6 +2172,11 @@ function renderHub() {
         <div class="hub-icon">📺</div>
         <div class="hub-title">公关管理</div>
         <div class="hub-desc">花费金钱提升声望</div>
+      </div>
+      <div class="hub-card" onclick="renderSocial()">
+        <div class="hub-icon">🤝</div>
+        <div class="hub-title">车手社交</div>
+        <div class="hub-desc">建立车手关系</div>
       </div>
     </div>
 
