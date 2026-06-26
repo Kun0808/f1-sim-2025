@@ -2065,6 +2065,10 @@ function acceptContract(offer) {
 
 function startNewSeason() {
   const oldTeamId = gameState.teamId;
+  // Save career race results before resetting
+  if (!gameState.careerRaceResults) gameState.careerRaceResults = [];
+  gameState.careerRaceResults = gameState.careerRaceResults.concat(gameState.raceResults);
+
   gameState.season++;
   gameState.currentRace = 0;
   gameState.seasonNumber++;
@@ -2506,20 +2510,21 @@ function retire() {
   const teamStandings = getTeamStandings();
   const playerTeamStanding = teamStandings.find(ts => ts.teamId === gameState.teamId);
 
-  // Calculate career stats
-  const totalRaces = gameState.raceResults.length;
+  // Calculate career stats - use careerRaceResults (all seasons) + current season
+  const allRaceResults = (gameState.careerRaceResults || []).concat(gameState.raceResults);
+  const totalRaces = allRaceResults.length;
   const wins = gameState.careerWins || 0;
   const podiums = gameState.careerPodiums || 0;
   const poles = gameState.careerPoles || 0;
   const points = gameState.careerPoints || 0;
   const championships = gameState.championships || 0;
-  const dnfs = gameState.raceResults.filter(r => r.dnf).length;
-  const bestFinish = gameState.raceResults.reduce((best, r) => {
+  const dnfs = allRaceResults.filter(r => r.dnf).length;
+  const bestFinish = allRaceResults.reduce((best, r) => {
     if (r.dnf) return best;
     return r.position < best ? r.position : best;
   }, 99);
   const avgPos = totalRaces > 0
-    ? (gameState.raceResults.reduce((sum, r) => sum + (r.dnf ? 20 : r.position), 0) / totalRaces).toFixed(1)
+    ? (allRaceResults.reduce((sum, r) => sum + (r.dnf ? 20 : r.position), 0) / totalRaces).toFixed(1)
     : '-';
   const winRate = totalRaces > 0 ? ((wins / totalRaces) * 100).toFixed(1) : '0';
   const podiumRate = totalRaces > 0 ? ((podiums / totalRaces) * 100).toFixed(1) : '0';
