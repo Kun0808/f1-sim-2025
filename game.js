@@ -2154,6 +2154,16 @@ function acceptContract(offer) {
 }
 
 function startNewSeason() {
+  // Ensure required fields exist for old saves
+  if (!gameState.raceResults) gameState.raceResults = [];
+  if (!gameState.teamStandings) gameState.teamStandings = TEAMS.map(t => ({ teamId: t.id, points: 0 }));
+  if (!gameState.drivers) gameState.drivers = [];
+  if (!gameState.reputation) gameState.reputation = { teamTrust: 50, mediaRelation: 50, fanPopularity: 50, driverRespect: 50 };
+  if (!gameState.stats) gameState.stats = { pace: 70, consistency: 70, wet: 65, defend: 68, attack: 72, raceIQ: 70 };
+  if (gameState.lastSeasonChampion === undefined) gameState.lastSeasonChampion = false;
+  if (gameState.salary === undefined) gameState.salary = 5;
+  if (gameState.money === undefined) gameState.money = 15;
+
   const oldTeamId = gameState.teamId;
   // Save career race results before resetting
   if (!gameState.careerRaceResults) gameState.careerRaceResults = [];
@@ -5227,114 +5237,138 @@ function endSeason() {
 }
 
 function showContractOffers() {
-  const offers = generateContractOffers();
-  raceState = { contractOffers: offers, selectedOffer: null };
+  try {
+    const offers = generateContractOffers();
+    raceState = { contractOffers: offers, selectedOffer: null };
 
-  showScreen('contract-screen');
-  document.getElementById('contract-screen').innerHTML = `
-    <div class="section-header">
-      <h2 class="font-display">💼 合同谈判</h2>
-    </div>
-    <div class="card" style="padding:14px;margin-bottom:16px;">
-      <div style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6;">
-        📋 赛季结束，以下车队对你表示了兴趣。点击卡片选择合同，查看详情后确认签约。<br>
-        ⚠️ 注意：其他车手也在竞争席位，如果犹豫太久可能被抢走机会。
+    showScreen('contract-screen');
+    document.getElementById('contract-screen').innerHTML = `
+      <div class="section-header">
+        <h2 class="font-display">💼 合同谈判</h2>
       </div>
-    </div>
+      <div class="card" style="padding:14px;margin-bottom:16px;">
+        <div style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6;">
+          📋 赛季结束，以下车队对你表示了兴趣。点击卡片选择合同，查看详情后确认签约。<br>
+          ⚠️ 注意：其他车手也在竞争席位，如果犹豫太久可能被抢走机会。
+        </div>
+      </div>
 
-    <div id="contract-list">
-      ${offers.map((offer, i) => {
-        const interestColor = offer.interest >= 70 ? 'var(--green)' : offer.interest >= 40 ? 'var(--yellow)' : 'var(--f1-red)';
-        const interestLabel = offer.interest >= 70 ? '非常感兴趣' : offer.interest >= 50 ? '有兴趣' : offer.interest >= 30 ? '一般' : '勉强考虑';
-        return `
-          <div class="contract-card" data-idx="${i}">
-            <div class="contract-team">
-              <span class="team-badge ${offer.team.css}" style="margin-right:8px;">${offer.team.short}</span>
-              ${offer.isCurrent ? '<span class="badge badge-green">续约</span>' : '<span class="badge badge-blue">新报价</span>'}
-              <span style="font-size:0.75rem;color:${interestColor};font-weight:600;margin-left:auto;">${interestLabel} ${offer.interest}%</span>
+      <div id="contract-list">
+        ${offers.map((offer, i) => {
+          const interestColor = offer.interest >= 70 ? 'var(--green)' : offer.interest >= 40 ? 'var(--yellow)' : 'var(--f1-red)';
+          const interestLabel = offer.interest >= 70 ? '非常感兴趣' : offer.interest >= 50 ? '有兴趣' : offer.interest >= 30 ? '一般' : '勉强考虑';
+          return `
+            <div class="contract-card" data-idx="${i}" onclick="selectContract(${i})">
+              <div class="contract-team">
+                <span class="team-badge ${offer.team.css}" style="margin-right:8px;">${offer.team.short}</span>
+                ${offer.isCurrent ? '<span class="badge badge-green">续约</span>' : '<span class="badge badge-blue">新报价</span>'}
+                <span style="font-size:0.75rem;color:${interestColor};font-weight:600;margin-left:auto;">${interestLabel} ${offer.interest}%</span>
+              </div>
+              <div class="contract-details">
+                <div class="contract-detail">💰 年薪: <span class="value">$${offer.salary}M</span></div>
+                <div class="contract-detail">📅 年限: <span class="value">${offer.years}年</span></div>
+                <div class="contract-detail">🏎️ 赛车性能: <span class="value">${offer.team.car}</span></div>
+                <div class="contract-detail">🎁 签字费: <span class="value">$${offer.signingBonus}M</span></div>
+              </div>
+              <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:0.8rem;color:var(--text-secondary);">
+                <div>🎯 车队期望: <span style="color:var(--text-primary);">${offer.expectation}</span></div>
+                <div>📝 合同条款: <span style="color:var(--text-primary);">${offer.clause}</span></div>
+                ${offer.rivalDriver ? `<div>⚔️ 竞争对手: <span style="color:var(--f1-red);">${offer.rivalDriver}</span> (对此席位兴趣 ${offer.rivalInterest}%)</div>` : '<div>⚔️ 竞争对手: <span style="color:var(--green);">无</span></div>'}
+              </div>
             </div>
-            <div class="contract-details">
-              <div class="contract-detail">💰 年薪: <span class="value">$${offer.salary}M</span></div>
-              <div class="contract-detail">📅 年限: <span class="value">${offer.years}年</span></div>
-              <div class="contract-detail">🏎️ 赛车性能: <span class="value">${offer.team.car}</span></div>
-              <div class="contract-detail">🎁 签字费: <span class="value">$${offer.signingBonus}M</span></div>
-            </div>
-            <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:0.8rem;color:var(--text-secondary);">
-              <div>🎯 车队期望: <span style="color:var(--text-primary);">${offer.expectation}</span></div>
-              <div>📝 合同条款: <span style="color:var(--text-primary);">${offer.clause}</span></div>
-              ${offer.rivalDriver ? `<div>⚔️ 竞争对手: <span style="color:var(--f1-red);">${offer.rivalDriver}</span> (对此席位兴趣 ${offer.rivalInterest}%)</div>` : '<div>⚔️ 竞争对手: <span style="color:var(--green);">无</span></div>'}
-            </div>
-          </div>
-        `;
-      }).join('')}
-    </div>
+          `;
+        }).join('')}
+      </div>
 
-    <div id="contract-detail-panel" style="display:none;margin-top:16px;"></div>
+      <div id="contract-detail-panel" style="display:none;margin-top:16px;"></div>
 
-    <button class="btn btn-primary btn-lg" id="accept-contract-btn" disabled style="margin-top:16px;">
-      签约并开始新赛季
-    </button>
-  `;
-
-  // Use event listeners instead of inline onclick to fix selection bug
-  const cards = document.querySelectorAll('.contract-card');
-  cards.forEach(card => {
-    card.addEventListener('click', function() {
-      const idx = parseInt(this.dataset.idx);
-      selectContract(idx);
-    });
-  });
-
-  document.getElementById('accept-contract-btn').addEventListener('click', function() {
-    acceptContractOffer();
-  });
+      <button class="btn btn-primary btn-lg" id="accept-contract-btn" disabled style="margin-top:16px;" onclick="acceptContractOffer()">
+        签约并开始新赛季
+      </button>
+    `;
+  } catch (err) {
+    console.error('showContractOffers error:', err);
+    document.getElementById('contract-screen').innerHTML = `
+      <div class="card" style="padding:20px;text-align:center;">
+        <div style="font-size:2rem;margin-bottom:12px;">⚠️</div>
+        <h3>合同生成出错</h3>
+        <p style="color:var(--text-muted);font-size:0.85rem;margin-top:8px;">${err.message}</p>
+        <button class="btn btn-primary" style="margin-top:16px;" onclick="showContractOffers()">重试</button>
+      </div>
+    `;
+  }
 }
 
 function selectContract(idx) {
-  const cards = document.querySelectorAll('.contract-card');
-  cards.forEach(c => c.classList.remove('selected'));
-  if (cards[idx]) {
-    cards[idx].classList.add('selected');
-  }
-  raceState.selectedOffer = idx;
+  try {
+    if (!raceState || !raceState.contractOffers) {
+      console.error('selectContract: raceState not initialized');
+      return;
+    }
+    const cards = document.querySelectorAll('.contract-card');
+    cards.forEach(c => c.classList.remove('selected'));
+    if (cards[idx]) {
+      cards[idx].classList.add('selected');
+    }
+    raceState.selectedOffer = idx;
 
-  // Show detail panel
-  const offer = raceState.contractOffers[idx];
-  const detailPanel = document.getElementById('contract-detail-panel');
-  detailPanel.style.display = 'block';
-  detailPanel.innerHTML = `
-    <div class="card" style="border-color:var(--gold);box-shadow:0 0 20px rgba(255,215,0,0.1);">
-      <h3 style="margin-bottom:12px;font-size:0.95rem;">📋 合同详情 — ${offer.team.short}</h3>
-      <div style="font-size:0.85rem;line-height:1.8;color:var(--text-secondary);">
-        <div>💰 <strong style="color:var(--text-primary);">年薪 $${offer.salary}M/年</strong> × ${offer.years}年 = 总价值 $${(offer.salary * offer.years).toFixed(1)}M</div>
-        <div>🎁 签字费: <strong style="color:var(--green);">$${offer.signingBonus}M</strong>（签约即得）</div>
-        <div>🎯 赛季目标: <strong style="color:var(--text-primary);">${offer.expectation}</strong>（年终排名需进入P${offer.expectationPos}以内）</div>
-        <div>📝 合同条款: <strong style="color:var(--text-primary);">${offer.clause}</strong></div>
-        ${offer.rivalDriver ? `<div>⚠️ <strong style="color:var(--f1-red);">${offer.rivalDriver}</strong>也在竞争这个席位，对方兴趣度 ${offer.rivalInterest}%</div>` : '<div>✅ <strong style="color:var(--green);">无竞争对手</strong>，车队专门为你预留席位</div>'}
+    // Show detail panel
+    const offer = raceState.contractOffers[idx];
+    if (!offer) return;
+    const detailPanel = document.getElementById('contract-detail-panel');
+    if (!detailPanel) return;
+    detailPanel.style.display = 'block';
+    detailPanel.innerHTML = `
+      <div class="card" style="border-color:var(--gold);box-shadow:0 0 20px rgba(255,215,0,0.1);">
+        <h3 style="margin-bottom:12px;font-size:0.95rem;">📋 合同详情 — ${offer.team.short}</h3>
+        <div style="font-size:0.85rem;line-height:1.8;color:var(--text-secondary);">
+          <div>💰 <strong style="color:var(--text-primary);">年薪 $${offer.salary}M/年</strong> × ${offer.years}年 = 总价值 $${(offer.salary * offer.years).toFixed(1)}M</div>
+          <div>🎁 签字费: <strong style="color:var(--green);">$${offer.signingBonus}M</strong>（签约即得）</div>
+          <div>🎯 赛季目标: <strong style="color:var(--text-primary);">${offer.expectation}</strong>（年终排名需进入P${offer.expectationPos}以内）</div>
+          <div>📝 合同条款: <strong style="color:var(--text-primary);">${offer.clause}</strong></div>
+          ${offer.rivalDriver ? `<div>⚠️ <strong style="color:var(--f1-red);">${offer.rivalDriver}</strong>也在竞争这个席位，对方兴趣度 ${offer.rivalInterest}%</div>` : '<div>✅ <strong style="color:var(--green);">无竞争对手</strong>，车队专门为你预留席位</div>'}
+        </div>
       </div>
-    </div>
-  `;
+    `;
 
-  // Scroll to detail
-  detailPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    // Scroll to detail
+    detailPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-  document.getElementById('accept-contract-btn').disabled = false;
+    const acceptBtn = document.getElementById('accept-contract-btn');
+    if (acceptBtn) acceptBtn.disabled = false;
+  } catch (err) {
+    console.error('selectContract error:', err);
+    showToast('选择合同时出错: ' + err.message, 'error');
+  }
 }
 
 function acceptContractOffer() {
-  if (raceState.selectedOffer === null || raceState.selectedOffer === undefined) return;
-  const offer = raceState.contractOffers[raceState.selectedOffer];
-  acceptContract(offer);
+  try {
+    if (!raceState || raceState.selectedOffer === null || raceState.selectedOffer === undefined) {
+      showToast('请先选择一个合同！', 'warning');
+      return;
+    }
+    const offer = raceState.contractOffers[raceState.selectedOffer];
+    if (!offer) {
+      showToast('合同数据无效，请重试', 'error');
+      return;
+    }
 
-  // Show transfer cascade info if there were transfers
-  if (gameState.lastTransferLog && gameState.lastTransferLog.length > 0) {
-    showTransferResults(offer);
-  } else {
-    startNewSeason();
-    raceState = null;
-    renderHub();
-    saveGame();
-    showToast(`已签约 ${offer.team.short}！${gameState.season} 赛季开始！`, 'success');
+    acceptContract(offer);
+
+    // Show transfer cascade info if there were transfers
+    if (gameState.lastTransferLog && gameState.lastTransferLog.length > 0) {
+      showTransferResults(offer);
+    } else {
+      startNewSeason();
+      raceState = null;
+      renderHub();
+      saveGame();
+      showToast(`已签约 ${offer.team.short}！${gameState.season} 赛季开始！`, 'success');
+    }
+  } catch (err) {
+    console.error('acceptContractOffer error:', err);
+    showToast('签约出错: ' + err.message, 'error', 5000);
   }
 }
 
@@ -5379,12 +5413,19 @@ function showTransferResults(offer) {
 }
 
 function finishTransferAndStart() {
-  gameState.lastTransferLog = null;
-  startNewSeason();
-  raceState = null;
-  renderHub();
-  saveGame();
-  showToast(`${gameState.season - 1}赛季结束！${gameState.season}赛季开始！`, 'success');
+  try {
+    gameState.lastTransferLog = null;
+    startNewSeason();
+    raceState = null;
+    renderHub();
+    saveGame();
+    showToast(`${gameState.season - 1}赛季结束！${gameState.season}赛季开始！`, 'success');
+  } catch (err) {
+    console.error('finishTransferAndStart error:', err);
+    showToast('开始新赛季出错: ' + err.message, 'error', 5000);
+    // Still try to render hub so user isn't stuck
+    try { renderHub(); } catch(e) {}
+  }
 }
 
 // ============ LOAD AND RESUME ============
