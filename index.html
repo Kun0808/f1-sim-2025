@@ -1724,7 +1724,7 @@ function getWeather() {
   return WEATHER_TYPES[3]; // heavy rain
 }
 
-function simulateQualifying(raceIdx) {
+function simulateQualifying(raceIdx, playerStrategy) {
   const track = TRACKS[raceIdx];
   const player = getPlayer();
   const results = [];
@@ -1732,12 +1732,33 @@ function simulateQualifying(raceIdx) {
   gameState.drivers.forEach(driver => {
     let score;
     if (driver.isPlayer) {
-      score = driver.stats.pace * 0.7 + getTeamCar() * 0.3;
-      score += (Math.random() - 0.5) * 8;
+      // Player score: pace dominant, car matters, consistency helps avoid mistakes
+      score = driver.stats.pace * 0.45 +
+              getTeamCar() * 0.30 +
+              driver.stats.consistency * 0.15 +
+              driver.stats.raceIQ * 0.10;
+      score += (Math.random() - 0.5) * 10; // Wider randomness
+
+      // Apply qualifying strategy modifier
+      if (playerStrategy) {
+        if (playerStrategy === 'push') {
+          score += 3; // Push hard: more pace but risk of mistake (handled by wider random below)
+          score += (Math.random() - 0.5) * 6; // Extra randomness for pushing
+        } else if (playerStrategy === 'balanced') {
+          score += 1; // Balanced: small bonus, normal randomness
+        } else if (playerStrategy === 'conservative') {
+          score -= 2; // Conservative: slower but consistent
+          score += (Math.random() - 0.5) * 4; // Less randomness
+        }
+      }
     } else {
       const s = driver.stats;
-      score = (s.pace || 75) * 0.6 + (s.skill || 75) * 0.1 + getCarForTeam(driver.teamIdx) * 0.3;
-      score += (Math.random() - 0.5) * 8;
+      // AI: pace + skill + car, with wet/track adaptation
+      score = (s.pace || 75) * 0.45 +
+              (s.skill || 75) * 0.10 +
+              getCarForTeam(driver.teamIdx) * 0.30 +
+              (s.consistency || 75) * 0.15;
+      score += (Math.random() - 0.5) * 10;
     }
     results.push({ driver, score });
   });
@@ -1753,48 +1774,43 @@ function simulateRaceSegment(segIdx, totalSegs, driver, track, weather, modifier
   let score;
 
   if (driver.isPlayer) {
-    score = s.pace * 0.22 +
+    score = s.pace * 0.20 +
             s.consistency * 0.18 +
-            s.wet * weather.wetMod * 0.12 +
-            s.raceIQ * 0.15 +
-            s.attack * 0.1 +
-            s.defend * 0.05 +
-            getTeamCar() * 0.18;
+            s.wet * weather.wetMod * 0.14 +
+            s.raceIQ * 0.16 +
+            s.attack * 0.10 +
+            s.defend * 0.07 +
+            getTeamCar() * 0.15;
 
-    // Apply modifiers from decisions (amplified for player)
+    // Apply modifiers from decisions (moderate amplification)
     if (modifiers) {
-      score += (modifiers.pace || 0) * 3;
-      score += (modifiers.raceIQ || 0) * 2.5;
-      score += (modifiers.attack || 0) * 2;
-      score += (modifiers.defend || 0) * 2;
-      score += (modifiers.consistency || 0) * 2;
-      score -= (modifiers.tireWear || 0) * (segIdx / totalSegs) * 1.5;
+      score += (modifiers.pace || 0) * 2;
+      score += (modifiers.raceIQ || 0) * 1.8;
+      score += (modifiers.attack || 0) * 1.5;
+      score += (modifiers.defend || 0) * 1.5;
+      score += (modifiers.consistency || 0) * 1.5;
+      score -= (modifiers.tireWear || 0) * (segIdx / totalSegs) * 1.2;
     }
-
-    // Player gets a small skill bonus to make the game more fun
-    score += 3;
   } else {
     score = (s.pace || 75) * 0.25 +
-            (s.consistency || 75) * 0.2 +
+            (s.consistency || 75) * 0.20 +
             (s.wet || 75) * weather.wetMod * 0.15 +
             (s.raceIQ || 75) * 0.15 +
-            (s.attack || 75) * 0.1 +
+            (s.attack || 75) * 0.10 +
             (s.defend || 75) * 0.05 +
-            getCarForTeam(driver.teamIdx) * 0.1;
+            getCarForTeam(driver.teamIdx) * 0.10;
   }
 
-  // Randomness (reduced for player)
-  const randRange = driver.isPlayer ? 8 : 12;
+  // Randomness (same for all drivers)
+  const randRange = 12;
   score += (Math.random() - 0.5) * randRange;
 
   // Weather chaos
   score += (Math.random() - 0.5) * weather.chaosMod * 30;
 
-  // DNF check (based on consistency, lower chance for player)
+  // DNF check (based on consistency)
   const consistency = driver.isPlayer ? s.consistency : (s.consistency || 75);
-  const dnfChance = driver.isPlayer
-    ? Math.max(0.003, (100 - consistency) / 1200)
-    : Math.max(0.005, (100 - consistency) / 1000);
+  const dnfChance = Math.max(0.005, (100 - consistency) / 1100);
   if (Math.random() < dnfChance && segIdx === totalSegs - 1) {
     return { score: -100, dnf: true };
   }
@@ -4222,15 +4238,93 @@ function renderRaceNews() {
       </div>
     `).join('')}
 
-    <button class="btn btn-primary btn-lg" onclick="startQualifying()" style="margin-top:20px;">
+    <button class="btn btn-primary btn-lg" onclick="renderQualifyingStrategy()" style="margin-top:20px;">
       进入排位赛 →
     </button>
   `;
 }
 
-function startQualifying() {
-  const result = simulateQualifying(raceState.raceIdx);
+function renderQualifyingStrategy() {
+  showScreen('race-screen');
+  const { track, weather } = raceState;
+  const player = getPlayer();
+  const team = TEAMS[gameState.teamIdx];
+  const isSprintWeekend = track.sprint;
+
+  document.getElementById('race-screen').innerHTML = `
+    <div class="race-header">
+      <div class="race-round">排位赛策略</div>
+      <div class="race-name">${track.name}</div>
+      <div class="race-country">${track.country}</div>
+      <div class="weather-badge">${weather.icon} ${weather.name}</div>
+    </div>
+
+    <div class="card" style="padding:16px;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;font-size:0.85rem;">
+        <div>🏎️ <strong style="color:${team.css.includes('red') ? 'var(--f1-red)' : 'var(--text-primary)'};">${team.short}</strong> 赛车性能: <strong>${team.car}</strong></div>
+        <div>⚡ 你的速度: <strong style="color:var(--f1-red);">${player.stats.pace}</strong></div>
+      </div>
+      ${weather.wetMod > 0.2 ? '<div style="margin-top:6px;font-size:0.8rem;color:var(--blue);">🌧️ 湿地条件 — 雨战能力将影响排位</div>' : ''}
+    </div>
+
+    <div class="section-header">
+      <h2 class="font-display">🏁 选择排位赛策略</h2>
+    </div>
+    <p class="text-muted" style="margin-bottom:16px;">不同策略会影响你的排位赛成绩和风险</p>
+
+    <div style="display:grid;gap:10px;">
+      <div class="contract-card" onclick="runQualifying('push')" style="border-color:var(--f1-red);">
+        <div class="contract-team">
+          <span style="font-size:1.5rem;margin-right:8px;">🔥</span>
+          全力推进
+          <span style="margin-left:auto;font-size:0.75rem;color:var(--f1-red);font-weight:600;">高风险高回报</span>
+        </div>
+        <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:4px;">
+          赛车推向极限，速度提升但失误风险增大
+        </div>
+        <div style="font-size:0.8rem;margin-top:4px;">
+          <span style="color:var(--green);">📈 速度 +3</span> ·
+          <span style="color:var(--f1-red);">⚠️ 随机性增大</span>
+        </div>
+      </div>
+
+      <div class="contract-card" onclick="runQualifying('balanced')">
+        <div class="contract-team">
+          <span style="font-size:1.5rem;margin-right:8px;">⚖️</span>
+          均衡策略
+          <span style="margin-left:auto;font-size:0.75rem;color:var(--green);font-weight:600;">推荐</span>
+        </div>
+        <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:4px;">
+          在速度和稳定之间取得平衡
+        </div>
+        <div style="font-size:0.8rem;margin-top:4px;">
+          <span style="color:var(--green);">📈 速度 +1</span> ·
+          <span style="color:var(--text-muted);">正常随机性</span>
+        </div>
+      </div>
+
+      <div class="contract-card" onclick="runQualifying('conservative')" style="border-color:var(--blue);">
+        <div class="contract-team">
+          <span style="font-size:1.5rem;margin-right:8px;">🛡️</span>
+          保守稳健
+          <span style="margin-left:auto;font-size:0.75rem;color:var(--blue);font-weight:600;">低风险</span>
+        </div>
+        <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:4px;">
+          确保稳定圈速，避免失误但速度略慢
+        </div>
+        <div style="font-size:0.8rem;margin-top:4px;">
+          <span style="color:var(--f1-red);">📉 速度 -2</span> ·
+          <span style="color:var(--green);">✅ 随机性减小</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function runQualifying(strategy) {
+  const result = simulateQualifying(raceState.raceIdx, strategy);
   raceState.qualifyingResult = result;
+  raceState.qualifyingStrategy = strategy;
   raceState.phase = 'qualifying';
 
   // Track pole position
@@ -4240,13 +4334,17 @@ function startQualifying() {
 
   const player = getPlayer();
   const team = TEAMS[gameState.teamIdx];
-
-  // Show qualifying results
   const top10 = result.results.slice(0, 10);
+
+  const strategyText = {
+    'push': '🔥 全力推进',
+    'balanced': '⚖️ 均衡策略',
+    'conservative': '🛡️ 保守稳健',
+  };
 
   document.getElementById('race-screen').innerHTML = `
     <div class="race-header">
-      <div class="race-round">排位赛结果</div>
+      <div class="race-round">排位赛结果 · ${strategyText[strategy] || ''}</div>
       <div class="race-name">${raceState.track.name}</div>
     </div>
 
@@ -4286,8 +4384,201 @@ function startQualifying() {
       </table>
     </div>
 
+    ${raceState.track.sprint ? `
+      <button class="btn btn-primary btn-lg" onclick="renderSprintRace()" style="margin-top:16px;">
+        🏁 进入冲刺赛 →
+      </button>
+    ` : `
+      <button class="btn btn-primary btn-lg" onclick="startRace()" style="margin-top:16px;">
+        🏁 开始正赛 →
+      </button>
+    `}
+  `;
+}
+
+// ============ SPRINT RACE ============
+
+const SPRINT_POINTS = [8, 7, 6, 5, 4, 3, 2, 1]; // Top 8 score
+
+function renderSprintRace() {
+  showScreen('race-screen');
+  const { track, weather, qualifyingResult } = raceState;
+  const player = getPlayer();
+  const team = TEAMS[gameState.teamIdx];
+  const gridPos = qualifyingResult.playerPos;
+
+  document.getElementById('race-screen').innerHTML = `
+    <div class="race-header">
+      <div class="race-round">🏁 冲刺赛</div>
+      <div class="race-name">${track.name}</div>
+      <div class="race-country">${track.country}</div>
+      <div class="weather-badge">${weather.icon} ${weather.name}</div>
+    </div>
+
+    <div class="card" style="padding:16px;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;font-size:0.85rem;">
+        <div>🏁 发车位: <strong style="color:var(--gold);">P${gridPos}</strong></div>
+        <div>🏎️ ${team.short} · 性能 ${team.car}</div>
+        <div>⚡ 速度 ${player.stats.pace} · 🎯 稳定 ${player.stats.consistency}</div>
+      </div>
+      ${weather.wetMod > 0.2 ? '<div style="margin-top:6px;font-size:0.8rem;color:var(--blue);">🌧️ 湿地条件 — 雨战能力将发挥关键作用</div>' : ''}
+    </div>
+
+    <div class="section-header">
+      <h2 class="font-display">🏁 冲刺赛策略</h2>
+    </div>
+    <p class="text-muted" style="margin-bottom:16px;">冲刺赛约100公里，前8名获得积分（8-7-6-5-4-3-2-1）。选择你的开局策略：</p>
+
+    <div style="display:grid;gap:10px;">
+      <div class="contract-card" onclick="runSprintRace('attack')">
+        <div class="contract-team">
+          <span style="font-size:1.5rem;margin-right:8px;">⚔️</span>
+          激进进攻
+          <span style="margin-left:auto;font-size:0.75rem;color:var(--f1-red);font-weight:600;">超车模式</span>
+        </div>
+        <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:4px;">开局就猛攻，争取提升名次</div>
+        <div style="font-size:0.8rem;margin-top:4px;">
+          <span style="color:var(--green);">📈 进攻 +5, 速度 +3</span> ·
+          <span style="color:var(--f1-red);">⚠️ 稳定 -3, 轮胎磨损 +</span>
+        </div>
+      </div>
+
+      <div class="contract-card" onclick="runSprintRace('hold')">
+        <div class="contract-team">
+          <span style="font-size:1.5rem;margin-right:8px;">🛡️</span>
+          稳守位置
+          <span style="margin-left:auto;font-size:0.75rem;color:var(--green);font-weight:600;">保位模式</span>
+        </div>
+        <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:4px;">守住当前位置，减少风险</div>
+        <div style="font-size:0.8rem;margin-top:4px;">
+          <span style="color:var(--green);">📈 防守 +5, 稳定 +2</span> ·
+          <span style="color:var(--text-muted);">速度正常</span>
+        </div>
+      </div>
+
+      <div class="contract-card" onclick="runSprintRace('balanced')">
+        <div class="contract-team">
+          <span style="font-size:1.5rem;margin-right:8px;">⚖️</span>
+          均衡应对
+          <span style="margin-left:auto;font-size:0.75rem;color:var(--blue);font-weight:600;">灵活模式</span>
+        </div>
+        <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:4px;">根据赛道情况灵活调整</div>
+        <div style="font-size:0.8rem;margin-top:4px;">
+          <span style="color:var(--green);">📈 全属性 +1</span> ·
+          <span style="color:var(--text-muted);">无负面效果</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function runSprintRace(strategy) {
+  const { track, weather, qualifyingResult } = raceState;
+  const player = getPlayer();
+
+  // Sprint race: 2 segments, simplified
+  const totalSegs = 2;
+  const gridOrder = [...qualifyingResult.results];
+
+  // Apply strategy modifiers for player
+  let sprintMods = {};
+  if (strategy === 'attack') {
+    sprintMods = { pace: 3, attack: 5, consistency: -3, defend: -1, tireWear: 2 };
+  } else if (strategy === 'hold') {
+    sprintMods = { defend: 5, consistency: 2, pace: -1 };
+  } else {
+    sprintMods = { pace: 1, consistency: 1, attack: 1, defend: 1, raceIQ: 1 };
+  }
+
+  // Simulate sprint race
+  const driverScores = {};
+  gridOrder.forEach(r => {
+    driverScores[r.driver.name] = { total: 0, dnf: false, driver: r.driver };
+  });
+
+  for (let seg = 0; seg < totalSegs; seg++) {
+    gridOrder.forEach(r => {
+      const driver = r.driver;
+      const mods = driver.isPlayer ? sprintMods : null;
+      const result = simulateRaceSegment(seg, totalSegs, driver, track, weather, mods);
+      if (result.dnf) {
+        driverScores[driver.name].dnf = true;
+      }
+      driverScores[driver.name].total += result.score;
+    });
+  }
+
+  // Sort by total score (DNFs go to back)
+  const sprintResults = Object.values(driverScores).sort((a, b) => {
+    if (a.dnf && !b.dnf) return 1;
+    if (!a.dnf && b.dnf) return -1;
+    return b.total - a.total;
+  });
+
+  const playerSprintPos = sprintResults.findIndex(r => r.driver.isPlayer) + 1;
+  const sprintPoints = playerSprintPos <= 8 ? SPRINT_POINTS[playerSprintPos - 1] : 0;
+
+  // Award sprint points (don't add to main championship in this simplified version,
+  // but track for display)
+  raceState.sprintResult = { position: playerSprintPos, points: sprintPoints, results: sprintResults };
+
+  const strategyText = {
+    'attack': '⚔️ 激进进攻',
+    'hold': '🛡️ 稳守位置',
+    'balanced': '⚖️ 均衡应对',
+  };
+
+  const gridPos = qualifyingResult.playerPos;
+  const posChange = gridPos - playerSprintPos;
+
+  document.getElementById('race-screen').innerHTML = `
+    <div class="race-header">
+      <div class="race-round">🏁 冲刺赛结果 · ${strategyText[strategy]}</div>
+      <div class="race-name">${track.name}</div>
+    </div>
+
+    <div class="card" style="text-align:center;padding:30px;">
+      <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">冲刺赛成绩</div>
+      <div style="font-family:'Orbitron';font-size:3rem;font-weight:900;color:${playerSprintPos <= 3 ? 'var(--gold)' : playerSprintPos <= 8 ? 'var(--green)' : 'var(--text-primary)'};">
+        P${playerSprintPos}
+      </div>
+      <div style="font-size:0.85rem;margin-top:4px;">
+        ${posChange > 0 ? `<span style="color:var(--green);">↑ 提升 ${posChange} 位</span>` : posChange < 0 ? `<span style="color:var(--f1-red);">↓ 下降 ${Math.abs(posChange)} 位</span>` : '<span style="color:var(--text-muted);">位置不变</span>'}
+        ${sprintPoints > 0 ? ` · <span style="color:var(--gold);">+${sprintPoints} 冲刺积分</span>` : ''}
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom:12px;font-size:0.9rem;color:var(--text-secondary);">冲刺赛前十名</h3>
+      <table class="standings-table">
+        <thead>
+          <tr>
+            <th class="pos-col">#</th>
+            <th>车手</th>
+            <th>车队</th>
+            <th class="pts-col">积分</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${sprintResults.slice(0, 10).map((r, i) => {
+            const t = TEAMS.find(t => t.id === r.driver.teamId);
+            const posClass = i + 1 <= 3 ? `pos-${i + 1}` : '';
+            const pts = i + 1 <= 8 ? SPRINT_POINTS[i] : 0;
+            return `
+              <tr class="${r.driver.isPlayer ? 'player-row' : ''}">
+                <td class="pos-col ${posClass}">${r.dnf ? 'DNF' : i + 1}</td>
+                <td>${r.driver.name} ${r.driver.isPlayer ? '⭐' : ''}</td>
+                <td><span class="team-badge ${t.css}" style="font-size:0.7rem;padding:2px 6px;">${t.short}</span></td>
+                <td class="pts-col">${pts > 0 ? '+' + pts : '-'}</td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+
     <button class="btn btn-primary btn-lg" onclick="startRace()" style="margin-top:16px;">
-      🏁 开始正赛 →
+      🏁 进入正赛 →
     </button>
   `;
 }
@@ -4446,11 +4737,13 @@ function showRaceResults(pos, pts, dnf) {
       </div>
       ${!dnf ? `
         <div class="result-points">获得 <span>+${pts}</span> 积分</div>
+        ${raceState.sprintResult ? `<div style="margin-top:4px;font-size:0.85rem;color:var(--gold);">🏁 冲刺赛: P${raceState.sprintResult.position} (+${raceState.sprintResult.points}pts)</div>` : ''}
         ${pos === 1 ? '<div style="margin-top:12px;font-size:1.5rem;">🏆 🎉 冠军！</div>' : ''}
         ${pos === 2 ? '<div style="margin-top:12px;font-size:1.2rem;">🥈 亚军！</div>' : ''}
         ${pos === 3 ? '<div style="margin-top:12px;font-size:1.2rem;">🥉 季军！</div>' : ''}
       ` : `
         <div class="result-points" style="color:var(--f1-red);">遗憾退赛</div>
+        ${raceState.sprintResult ? `<div style="margin-top:4px;font-size:0.85rem;color:var(--gold);">🏁 冲刺赛: P${raceState.sprintResult.position} (+${raceState.sprintResult.points}pts)</div>` : ''}
       `}
     </div>
 
