@@ -702,14 +702,55 @@ function processTransferCascade(newTeamIdx, transferLog) {
 }
 
 // Initialize driver relationships
+// Driver social circles for existing drivers - realistic friendships and rivalries
+const DRIVER_SOCIAL_CIRCLES = {
+  'M. Verstappen': { friends: ['S. Pérez', 'Y. Tsunoda'], rivals: ['L. Hamilton', 'G. Russell', 'L. Norris'] },
+  'S. Pérez': { friends: ['M. Verstappen', 'F. Alonso'], rivals: ['C. Leclerc'] },
+  'L. Norris': { friends: ['O. Piastri', 'C. Sainz', 'G. Russell'], rivals: ['M. Verstappen'] },
+  'O. Piastri': { friends: ['L. Norris', 'C. Leclerc'], rivals: [] },
+  'C. Leclerc': { friends: ['L. Hamilton', 'O. Piastri', 'P. Gasly'], rivals: ['M. Verstappen'] },
+  'L. Hamilton': { friends: ['C. Leclerc', 'G. Russell', 'F. Alonso'], rivals: ['M. Verstappen', 'S. Pérez'] },
+  'G. Russell': { friends: ['L. Norris', 'L. Hamilton', 'A.K. Antonelli'], rivals: ['M. Verstappen'] },
+  'A.K. Antonelli': { friends: ['G. Russell', 'O. Bearman'], rivals: [] },
+  'F. Alonso': { friends: ['L. Stroll', 'S. Pérez', 'L. Hamilton'], rivals: ['N. Hülkenberg'] },
+  'L. Stroll': { friends: ['F. Alonso'], rivals: [] },
+  'P. Gasly': { friends: ['C. Leclerc', 'E. Ocon'], rivals: ['F. Colapinto'] },
+  'F. Colapinto': { friends: [], rivals: ['P. Gasly'] },
+  'E. Ocon': { friends: ['P. Gasly'], rivals: [] },
+  'N. Hülkenberg': { friends: ['K. Magnussen', 'V. Bottas'], rivals: ['F. Alonso'] },
+  'O. Bearman': { friends: ['A.K. Antonelli', 'K. Magnussen'], rivals: [] },
+  'G. Bortoleto': { friends: ['N. Hülkenberg'], rivals: [] },
+  'A. Albon': { friends: ['C. Sainz', 'L. Lawson'], rivals: [] },
+  'C. Sainz': { friends: ['L. Norris', 'A. Albon', 'F. Alonso'], rivals: ['C. Leclerc'] },
+  'Y. Tsunoda': { friends: ['M. Verstappen', 'I. Hadjar'], rivals: [] },
+  'I. Hadjar': { friends: ['Y. Tsunoda'], rivals: [] },
+};
+
 function initDriverRelationships() {
   if (gameState.driverRelationships) return;
   gameState.driverRelationships = {};
+  const playerName = gameState.playerName;
+  const socialCircle = DRIVER_SOCIAL_CIRCLES[playerName];
+
   gameState.drivers.forEach(d => {
     if (!d.isPlayer) {
-      // Teammate starts higher, others random
       const isTeammate = d.teamIdx === gameState.teamIdx;
-      gameState.driverRelationships[d.name] = isTeammate ? 40 + Math.floor(Math.random() * 20) : 20 + Math.floor(Math.random() * 30);
+
+      if (gameState.background === 'existing' && socialCircle) {
+        // Existing driver: use social circle data
+        if (socialCircle.friends.includes(d.name)) {
+          gameState.driverRelationships[d.name] = 65 + Math.floor(Math.random() * 15); // 65-80
+        } else if (socialCircle.rivals.includes(d.name)) {
+          gameState.driverRelationships[d.name] = 10 + Math.floor(Math.random() * 10); // 10-20
+        } else if (isTeammate) {
+          gameState.driverRelationships[d.name] = 50 + Math.floor(Math.random() * 15); // 50-65
+        } else {
+          gameState.driverRelationships[d.name] = 25 + Math.floor(Math.random() * 20); // 25-45
+        }
+      } else {
+        // New driver: teammate starts higher, others random
+        gameState.driverRelationships[d.name] = isTeammate ? 40 + Math.floor(Math.random() * 20) : 20 + Math.floor(Math.random() * 30);
+      }
     }
   });
 }
@@ -734,18 +775,20 @@ function changeRelationship(driverName, delta) {
 
 // Social interaction options
 const SOCIAL_ACTIONS = [
-  { id: 'dinner', name: '一起晚餐', cost: 2, desc: '邀请车手共进晚餐，增进感情', repGain: 8 },
-  { id: 'gym', name: '一起训练', cost: 0, desc: '邀请车手一起体能训练', repGain: 5 },
-  { id: 'sim_racing', name: '模拟器对战', cost: 1, desc: '在线上模拟器赛一局', repGain: 6 },
-  { id: 'gift', name: '送礼物', cost: 5, desc: '送一份精心挑选的礼物', repGain: 12 },
-  { id: 'interview', name: '公开赞扬', cost: 0, desc: '在采访中公开称赞对方', repGain: 4, mediaCost: true },
+  { id: 'dinner', name: '一起晚餐', cost: 2, desc: '邀请车手共进晚餐，增进感情', repGain: 8, type: 'friendly' },
+  { id: 'gym', name: '一起训练', cost: 0, desc: '邀请车手一起体能训练', repGain: 5, type: 'friendly' },
+  { id: 'sim_racing', name: '模拟器对战', cost: 1, desc: '在线上模拟器赛一局', repGain: 6, type: 'friendly' },
+  { id: 'gift', name: '送礼物', cost: 5, desc: '送一份精心挑选的礼物', repGain: 12, type: 'friendly' },
+  { id: 'interview', name: '公开赞扬', cost: 0, desc: '在采访中公开称赞对方', repGain: 4, type: 'friendly', mediaCost: true },
+  { id: 'taunt', name: '嘲讽', cost: 0, desc: '公开嘲讽对方，损害关系', repGain: -15, type: 'hostile', mediaCost: true },
 ];
 
 function renderSocial() {
   showScreen('sponsor-screen'); // Reuse sponsor-screen as generic screen
   initDriverRelationships();
   const container = document.getElementById('sponsor-screen');
-  const player = getPlayer();
+
+  const socialUsedThisWeek = gameState.socialUsedThisWeek;
 
   // Sort drivers by relationship (highest first), exclude player
   const otherDrivers = gameState.drivers
@@ -763,36 +806,59 @@ function renderSocial() {
       <h2 class="font-display">🤝 车手社交</h2>
     </div>
     <div class="card" style="padding:12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
-      <div style="font-size:0.85rem;color:var(--text-secondary);">与围场车手建立关系，高亲密度可能影响转会和赛事事件</div>
+      <div style="font-size:0.85rem;color:var(--text-secondary);">每周仅可进行一次社交互动${socialUsedThisWeek ? '（本周已用）' : ''}</div>
       <div style="font-size:0.85rem;color:var(--green);font-weight:700;">💵 $${(gameState.money || 0).toFixed(1)}M</div>
     </div>
+    ${socialUsedThisWeek ? `
+      <div class="card" style="text-align:center;padding:30px;margin-bottom:12px;">
+        <div style="font-size:2.5rem;margin-bottom:8px;">⏸️</div>
+        <h3 style="font-size:0.95rem;">本周社交互动已完成</h3>
+        <p class="text-muted" style="margin-top:6px;font-size:0.8rem;">每站比赛周只能对一位车手进行一次社交行为</p>
+      </div>
+    ` : ''}
     <div style="display:grid;gap:10px;">
       ${otherDrivers.map(({ driver, rel, isTeammate }) => {
         const level = getRelationshipLevel(rel);
         const team = TEAMS[driver.teamIdx];
+        const isMax = rel >= 100;
+        const socialCircle = DRIVER_SOCIAL_CIRCLES[gameState.playerName];
+        const isFriend = socialCircle && socialCircle.friends.includes(driver.name);
+        const isRival = socialCircle && socialCircle.rivals.includes(driver.name);
         return `
-          <div class="card" style="padding:12px;">
+          <div class="card" style="padding:12px;${isMax ? 'border-color:var(--gold);' : ''}">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
               <div>
                 <span style="font-weight:700;">${driver.name}</span>
                 ${isTeammate ? '<span style="font-size:0.7rem;color:var(--blue);margin-left:6px;">队友</span>' : ''}
+                ${isFriend ? '<span style="font-size:0.7rem;color:var(--green);margin-left:6px;">好友</span>' : ''}
+                ${isRival ? '<span style="font-size:0.7rem;color:var(--f1-red);margin-left:6px;">宿敌</span>' : ''}
                 <span class="team-badge ${team.css}" style="font-size:0.7rem;padding:2px 6px;margin-left:6px;">${team.short}</span>
               </div>
               <div style="font-size:0.85rem;">
                 ${level.icon} <span style="color:${level.color};font-weight:600;">${level.label}</span>
-                <span style="color:var(--text-muted);margin-left:4px;">${rel}</span>
+                <span style="color:${isMax ? 'var(--gold)' : 'var(--text-muted)'};margin-left:4px;font-weight:${isMax ? '700' : '400'};">${isMax ? 'MAX' : rel}</span>
               </div>
             </div>
             <div class="stat-bar-bg" style="height:6px;margin-bottom:8px;">
-              <div class="stat-bar-fill" style="width:${rel}%;background:${level.color};"></div>
+              <div class="stat-bar-fill" style="width:${rel}%;background:${isMax ? 'var(--gold)' : level.color};"></div>
             </div>
             <div style="display:flex;gap:6px;flex-wrap:wrap;">
-              ${SOCIAL_ACTIONS.map(a => `
-                <button class="btn" style="font-size:0.75rem;padding:4px 10px;${(gameState.money || 0) < a.cost ? 'opacity:0.4;cursor:not-allowed;' : ''}"
-                  ${(gameState.money || 0) < a.cost ? 'disabled' : `onclick="doSocial('${driver.name}', '${a.id}')"`}>
+              ${SOCIAL_ACTIONS.map(a => {
+                const isHostile = a.type === 'hostile';
+                const canAfford = (gameState.money || 0) >= a.cost;
+                const disabled = socialUsedThisWeek || (isMax && !isHostile) || !canAfford;
+                let disabledReason = '';
+                if (socialUsedThisWeek) disabledReason = '本周已用';
+                else if (isMax && !isHostile) disabledReason = '已满级';
+                else if (!canAfford) disabledReason = '余额不足';
+
+                return `
+                <button class="btn" style="font-size:0.75rem;padding:4px 10px;${isHostile ? 'border-color:var(--f1-red);color:var(--f1-red);' : ''}${disabled ? 'opacity:0.35;cursor:not-allowed;' : ''}"
+                  ${disabled ? 'disabled' : `onclick="doSocial('${driver.name}', '${a.id}')"`}
+                  title="${a.desc}${disabledReason ? ' (' + disabledReason + ')' : ''}">
                   ${a.name} ${a.cost > 0 ? '$' + a.cost + 'M' : '免费'}
                 </button>
-              `).join('')}
+              `}).join('')}
             </div>
           </div>
         `;
@@ -804,25 +870,71 @@ function renderSocial() {
 function doSocial(driverName, actionId) {
   const action = SOCIAL_ACTIONS.find(a => a.id === actionId);
   if (!action) return;
+
+  // Check weekly limit
+  if (gameState.socialUsedThisWeek) {
+    showToast('本周社交互动已用完！', 'error');
+    return;
+  }
+
   if ((gameState.money || 0) < action.cost) {
     showToast('余额不足！', 'error');
     return;
   }
 
+  const currentRel = gameState.driverRelationships[driverName] || 30;
+
+  // Check if MAX and friendly action
+  if (currentRel >= 100 && action.type !== 'hostile') {
+    showToast(`${driverName} 的亲密度已满级！`, 'info');
+    return;
+  }
+
   gameState.money -= action.cost;
-  const oldRel = gameState.driverRelationships[driverName] || 30;
-  const gain = action.repGain + Math.floor(Math.random() * 4 - 2); // ±2 randomness
+  const oldRel = currentRel;
+
+  let gain;
+  if (action.type === 'hostile') {
+    // Taunt: larger negative, with randomness
+    gain = action.repGain + Math.floor(Math.random() * 5 - 2); // -17 to -13
+  } else {
+    gain = action.repGain + Math.floor(Math.random() * 4 - 2); // ±2 randomness
+    // Diminishing returns near max
+    if (oldRel >= 90) gain = Math.max(1, Math.floor(gain * 0.5));
+    else if (oldRel >= 80) gain = Math.max(2, Math.floor(gain * 0.7));
+  }
+
   changeRelationship(driverName, gain);
   const newRel = gameState.driverRelationships[driverName];
+  gameState.socialUsedThisWeek = true;
 
-  // High relationship bonus effects
+  // Effects based on action type
   let bonusText = '';
-  if (oldRel < 60 && newRel >= 60) {
-    bonusText = ' 🎉 你们成为了好友！';
-    gameState.reputation.driverRespect = Math.min(100, (gameState.reputation.driverRespect || 0) + 3);
-  } else if (oldRel < 80 && newRel >= 80) {
-    bonusText = ' 🎉 你们成为了挚友！转会时可能获得帮助';
-    gameState.reputation.driverRespect = Math.min(100, (gameState.reputation.driverRespect || 0) + 5);
+
+  if (action.type === 'hostile') {
+    // Taunt effects
+    gameState.reputation.fanPopularity = Math.min(100, (gameState.reputation.fanPopularity || 0) + 3);
+    gameState.reputation.mediaRelation = Math.max(0, (gameState.reputation.mediaRelation || 0) - 4);
+    gameState.reputation.driverRespect = Math.max(0, (gameState.reputation.driverRespect || 0) - 5);
+
+    if (oldRel >= 20 && newRel < 20) {
+      bonusText = ' 💢 你们正式成为宿敌！';
+    } else if (oldRel >= 40 && newRel < 40) {
+      bonusText = ' 关系急剧恶化';
+    } else {
+      bonusText = ' 围场炸锅了！';
+    }
+  } else {
+    // Friendly effects
+    if (oldRel < 60 && newRel >= 60) {
+      bonusText = ' 🎉 你们成为了好友！';
+      gameState.reputation.driverRespect = Math.min(100, (gameState.reputation.driverRespect || 0) + 3);
+    } else if (oldRel < 80 && newRel >= 80) {
+      bonusText = ' 🎉 你们成为了挚友！转会时可能获得帮助';
+      gameState.reputation.driverRespect = Math.min(100, (gameState.reputation.driverRespect || 0) + 5);
+    } else if (newRel >= 100) {
+      bonusText = ' ⭐ 亲密度已满级(MAX)！';
+    }
   }
 
   if (action.mediaCost) {
@@ -830,7 +942,10 @@ function doSocial(driverName, actionId) {
   }
 
   saveGame();
-  showToast(`${action.name} → ${driverName} 亲密度 +${gain}${bonusText}`, 'success');
+
+  const sign = gain >= 0 ? '+' : '';
+  const toastType = action.type === 'hostile' ? 'info' : 'success';
+  showToast(`${action.name} → ${driverName} 亲密度 ${sign}${gain}${bonusText}`, toastType, 4000);
   renderSocial();
 }
 
@@ -1188,6 +1303,7 @@ function createNewGame(name, backgroundId, selectedTeamIdx, replaceSlot) {
     sponsorYearsLeft: 0,
     totalEarnings: 0,
     money: 15, // Starting balance in $M - tight budget early on
+    socialUsedThisWeek: false,
   };
 
   return gameState;
@@ -1755,6 +1871,7 @@ function startNewSeason() {
   gameState.seasonNumber++;
   gameState.raceResults = [];
   gameState.trainedThisWeek = false;
+  gameState.socialUsedThisWeek = false;
   gameState.seasonPoints = 0;
   gameState.seasonFinishes = 0;
   gameState.consecutiveWins = 0;
@@ -2197,6 +2314,7 @@ function createGameAsExistingDriver(driverIdx) {
     sponsorYearsLeft: 0,
     totalEarnings: 0,
     money: 15,
+    socialUsedThisWeek: false,
   };
 
   showScreen('hub-screen');
@@ -2850,6 +2968,7 @@ function quickSimSeason() {
     // Advance race
     gameState.currentRace++;
     gameState.trainedThisWeek = false;
+    gameState.socialUsedThisWeek = false;
     simStep++;
 
     // Save periodically
@@ -4571,6 +4690,7 @@ function showRaceResults(pos, pts, dnf) {
 function afterRace() {
   gameState.currentRace++;
   gameState.trainedThisWeek = false;
+  gameState.socialUsedThisWeek = false;
   raceState = null;
   renderHub();
   saveGame();
