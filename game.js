@@ -2438,6 +2438,7 @@ function renderDriverProfile() {
   const player = getPlayer();
   const team = TEAMS[gameState.teamIdx];
   const bg = BACKGROUNDS.find(b => b.id === gameState.background);
+  const bgDisplay = bg ? `${bg.icon} ${bg.name}` : '👤 现役车手';
 
   document.getElementById('driver-screen').innerHTML = `
     <button class="back-btn" onclick="renderHub()">← 返回主页</button>
@@ -2450,7 +2451,7 @@ function renderDriverProfile() {
         <div>
           <h2 style="margin-bottom:4px;">${gameState.playerName}</h2>
           <span class="team-badge ${team.css}">${team.short}</span>
-          <span class="badge badge-red" style="margin-left:8px;">${bg.icon} ${bg.name}</span>
+          <span class="badge badge-red" style="margin-left:8px;">${bgDisplay}</span>
         </div>
         <div style="text-align:right;">
           <div style="font-size:0.75rem;color:var(--text-muted);">赛季</div>
