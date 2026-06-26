@@ -1478,6 +1478,174 @@ const TEAM_PRINCIPALS = [
   { teamIdx: 9, name: 'Mattia Binotto', style: 'conservative', desc: '保守稳重，按部就班' },
 ];
 
+// ============ RESERVE DRIVERS (2025) ============
+
+const RESERVE_DRIVERS = [
+  { name: 'F. Colapinto', pace: 80, consistency: 75, wet: 76, defend: 77, attack: 79, raceIQ: 76, skill: 78 },
+  { name: 'J. Doohan', pace: 78, consistency: 74, wet: 75, defend: 76, attack: 78, raceIQ: 75, skill: 76 },
+  { name: 'L. Lawson', pace: 81, consistency: 76, wet: 74, defend: 77, attack: 80, raceIQ: 77, skill: 79 },
+  { name: 'P. Aron', pace: 76, consistency: 75, wet: 73, defend: 74, attack: 76, raceIQ: 75, skill: 74 },
+  { name: 'F. Drugovich', pace: 77, consistency: 76, wet: 75, defend: 75, attack: 76, raceIQ: 76, skill: 75 },
+  { name: 'R. Hirakawa', pace: 75, consistency: 77, wet: 76, defend: 74, attack: 74, raceIQ: 77, skill: 75 },
+  { name: 'D. Beganovic', pace: 76, consistency: 74, wet: 74, defend: 75, attack: 76, raceIQ: 74, skill: 74 },
+  { name: 'A. Dunne', pace: 75, consistency: 73, wet: 72, defend: 73, attack: 76, raceIQ: 73, skill: 73 },
+  { name: 'P. O\'Ward', pace: 76, consistency: 75, wet: 73, defend: 74, attack: 75, raceIQ: 75, skill: 75 },
+  { name: 'F. Vesti', pace: 76, consistency: 76, wet: 75, defend: 75, attack: 75, raceIQ: 76, skill: 75 },
+  { name: 'V. Bottas', pace: 83, consistency: 80, wet: 82, defend: 81, attack: 79, raceIQ: 82, skill: 82 },
+  { name: 'A. Iwasa', pace: 75, consistency: 74, wet: 73, defend: 74, attack: 76, raceIQ: 74, skill: 74 },
+  { name: 'L. Browning', pace: 74, consistency: 73, wet: 72, defend: 73, attack: 75, raceIQ: 73, skill: 73 },
+  { name: 'V. Martins', pace: 75, consistency: 74, wet: 73, defend: 74, attack: 75, raceIQ: 74, skill: 74 },
+];
+
+let usedReserveDrivers = new Set();
+
+function getNextReserveDriver() {
+  const available = RESERVE_DRIVERS.filter(d => !usedReserveDrivers.has(d.name));
+  if (available.length === 0) {
+    // Reset and reuse
+    usedReserveDrivers.clear();
+    return RESERVE_DRIVERS[0];
+  }
+  const driver = available[Math.floor(Math.random() * available.length)];
+  usedReserveDrivers.add(driver.name);
+  return driver;
+}
+
+// ============ TRANSFER CASCADE SYSTEM ============
+
+function processTransferCascade(newTeamIdx, transferLog) {
+  // The player is joining newTeamIdx, displacing one of their drivers
+  // Find which driver gets displaced (the one with worse performance or random)
+  const newTeamDrivers = gameState.drivers.filter(d => d.teamIdx === newTeamIdx && !d.isPlayer);
+
+  if (newTeamDrivers.length === 0) return; // Empty team, no cascade needed
+
+  // The weaker driver gets displaced
+  let displacedDriver;
+  if (newTeamDrivers.length === 1) {
+    displacedDriver = newTeamDrivers[0];
+  } else {
+    // Compare by points, lower points gets displaced
+    displacedDriver = newTeamDrivers.reduce((a, b) => (a.points < b.points ? a : b));
+  }
+
+  transferLog.push({
+    driver: displacedDriver.name,
+    from: TEAMS[newTeamIdx].short,
+    to: null, // TBD
+  });
+
+  // Now this displaced driver needs to find a new team
+  // Look for teams with an open seat (teams that lost a driver in this cascade)
+  // Or find a team where they could replace a weaker driver
+
+  const oldTeamIdx = gameState.drivers.find(d => d.isPlayer).teamIdx;
+  const oldTeam = TEAMS[oldTeamIdx];
+
+  // Priority 1: The player's old team has an open seat
+  if (oldTeamIdx !== newTeamIdx) {
+    const oldTeamDriverCount = gameState.drivers.filter(d => d.teamIdx === oldTeamIdx && !d.isPlayer).length;
+    if (oldTeamDriverCount < 2) {
+      // Old team has an open seat, displaced driver goes there
+      displacedDriver.teamIdx = oldTeamIdx;
+      displacedDriver.teamId = oldTeam.id;
+      transferLog[transferLog.length - 1].to = oldTeam.short;
+      return; // Cascade resolved
+    }
+  }
+
+  // Priority 2: Find another team with an open seat from the cascade
+  // (This handles multi-step cascades, but for simplicity we do one step)
+
+  // Priority 3: The displaced driver replaces a weaker driver at another team
+  // Find teams where this driver would be an upgrade
+  const eligibleTeams = [];
+  for (let t = 0; t < TEAMS.length; t++) {
+    if (t === newTeamIdx) continue; // Skip the team player just joined
+    const teamDrivers = gameState.drivers.filter(d => d.teamIdx === t && !d.isPlayer);
+    if (teamDrivers.length < 2) {
+      eligibleTeams.push({ teamIdx: t, reason: 'open_seat' });
+    } else {
+      // Check if displaced driver is better than the weaker one
+      const weaker = teamDrivers.reduce((a, b) => (a.points < b.points ? a : b));
+      const displacedScore = (displacedDriver.stats.pace + displacedDriver.stats.consistency + displacedDriver.stats.raceIQ) / 3;
+      const weakerScore = (weaker.stats.pace + weaker.stats.consistency + weaker.stats.raceIQ) / 3;
+      if (displacedScore > weakerScore + 3) {
+        eligibleTeams.push({ teamIdx: t, reason: 'upgrade', replaceDriver: weaker });
+      }
+    }
+  }
+
+  if (eligibleTeams.length > 0) {
+    // Prefer teams closer in performance to the displaced driver's level
+    const chosen = eligibleTeams[Math.floor(Math.random() * eligibleTeams.length)];
+    const chosenTeam = TEAMS[chosen.teamIdx];
+
+    if (chosen.reason === 'upgrade' && chosen.replaceDriver) {
+      // This creates another cascade - the replaced driver goes to reserve or finds another team
+      const secondDisplaced = chosen.replaceDriver;
+      transferLog.push({
+        driver: secondDisplaced.name,
+        from: chosenTeam.short,
+        to: '替补/退役',
+      });
+
+      // 50% chance the second displaced driver becomes a reserve, 50% finds a weaker team
+      if (Math.random() < 0.5) {
+        // Replace with a reserve driver at this team
+        const reserve = getNextReserveDriver();
+        secondDisplaced.name = reserve.name;
+        secondDisplaced.stats = {
+          pace: reserve.pace, consistency: reserve.consistency, wet: reserve.wet,
+          defend: reserve.defend, attack: reserve.attack, raceIQ: reserve.raceIQ, skill: reserve.skill,
+        };
+        secondDisplaced.teamIdx = chosen.teamIdx;
+        secondDisplaced.teamId = chosenTeam.id;
+        transferLog[transferLog.length - 1].to = '替补车手替换';
+      } else {
+        // Second displaced driver goes to a backmarker team or becomes reserve
+        const backmarkerIdx = TEAMS.length - 1;
+        const backmarkerDrivers = gameState.drivers.filter(d => d.teamIdx === backmarkerIdx && !d.isPlayer);
+        if (backmarkerDrivers.length < 2) {
+          secondDisplaced.teamIdx = backmarkerIdx;
+          secondDisplaced.teamId = TEAMS[backmarkerIdx].id;
+          transferLog[transferLog.length - 1].to = TEAMS[backmarkerIdx].short;
+        } else {
+          // Replace weakest backmarker driver with a reserve
+          const weakest = backmarkerDrivers.reduce((a, b) => (a.points < b.points ? a : b));
+          const reserve = getNextReserveDriver();
+          weakest.name = reserve.name;
+          weakest.stats = {
+            pace: reserve.pace, consistency: reserve.consistency, wet: reserve.wet,
+            defend: reserve.defend, attack: reserve.attack, raceIQ: reserve.raceIQ, skill: reserve.skill,
+          };
+          secondDisplaced.teamIdx = backmarkerIdx;
+          secondDisplaced.teamId = TEAMS[backmarkerIdx].id;
+          transferLog[transferLog.length - 1].to = TEAMS[backmarkerIdx].short;
+        }
+      }
+    }
+
+    displacedDriver.teamIdx = chosen.teamIdx;
+    displacedDriver.teamId = chosenTeam.id;
+    transferLog[transferLog.length - 1].to = chosenTeam.short;
+
+  } else {
+    // No team will take the displaced driver - use a reserve driver to replace them
+    const reserve = getNextReserveDriver();
+    transferLog[transferLog.length - 1].to = '退役，替补' + reserve.name + '上场';
+
+    // Replace the displaced driver with a reserve driver at the player's old team
+    displacedDriver.name = reserve.name;
+    displacedDriver.stats = {
+      pace: reserve.pace, consistency: reserve.consistency, wet: reserve.wet,
+      defend: reserve.defend, attack: reserve.attack, raceIQ: reserve.raceIQ, skill: reserve.skill,
+    };
+    displacedDriver.teamIdx = oldTeamIdx;
+    displacedDriver.teamId = oldTeam.id;
+  }
+}
+
 // Initialize driver relationships
 function initDriverRelationships() {
   if (gameState.driverRelationships) return;
@@ -1791,19 +1959,67 @@ function getRaceDecisions(raceIdx, state) {
 // ============ ACHIEVEMENTS ============
 
 const ACHIEVEMENTS = [
-  { id: 'first_win', name: '🏆 首胜', desc: '赢得你的第一场分站冠军', icon: '🏆', check: (gs) => gs.careerWins >= 1 },
-  { id: 'first_podium', name: '🥉 初登领奖台', desc: '第一次登上领奖台', icon: '🥉', check: (gs) => gs.careerPodiums >= 1 },
-  { id: 'champion', name: '👑 世界冠军', desc: '赢得世界冠军', icon: '👑', check: (gs) => gs.championships >= 1 },
-  { id: 'five_wins', name: '⭐ 五冠王', desc: '职业生涯赢得5场分站冠军', icon: '⭐', check: (gs) => gs.careerWins >= 5 },
-  { id: 'ten_podiums', name: '💎 常客', desc: '职业生涯10次登上领奖台', icon: '💎', check: (gs) => gs.careerPodiums >= 10 },
-  { id: 'pole_master', name: '🎯 杆位大师', desc: '获得5次杆位', icon: '🎯', check: (gs) => (gs.careerPoles || 0) >= 5 },
-  { id: 'rain_master', name: '🌧️ 雨神', desc: '在雨天比赛中获胜', icon: '🌧️', check: (gs) => gs.rainWins >= 1 },
-  { id: 'comeback_king', name: '🔄 逆转之王', desc: '从P10以后发车获胜', icon: '🔄', check: (gs) => gs.comebackWin >= 1 },
-  { id: 'ironman', name: '🛡️ 铁人', desc: '连续10场完赛', icon: '🛡️', check: (gs) => gs.consecutiveFinishes >= 10 },
-  { id: 'team_loyalty', name: '❤️ 忠诚', desc: '在同一支车队效力3个赛季', icon: '❤️', check: (gs) => gs.seasonsAtCurrentTeam >= 3 },
-  { id: 'century', name: '💯 百分俱乐部', desc: '单赛季获得超过100分', icon: '💯', check: (gs) => gs.seasonPoints >= 100 },
-  { id: 'underdog', name: '🐺 黑马', desc: '在排名后5的车队中获得领奖台', icon: '🐺', check: (gs) => gs.underdogPodium >= 1 },
+  // === 普通 (Common) ===
+  { id: 'first_podium', name: '🥉 初登领奖台', desc: '第一次登上领奖台', icon: '🥉', rarity: 'common', check: (gs) => gs.careerPodiums >= 1 },
+  { id: 'first_win', name: '🏆 首胜', desc: '赢得你的第一场分站冠军', icon: '🏆', rarity: 'common', check: (gs) => gs.careerWins >= 1 },
+  { id: 'first_points', name: '📍 首获积分', desc: '第一次获得锦标赛积分', icon: '📍', rarity: 'common', check: (gs) => gs.careerPoints >= 1 },
+  { id: 'ironman', name: '🛡️ 铁人', desc: '连续10场完赛', icon: '🛡️', rarity: 'common', check: (gs) => gs.consecutiveFinishes >= 10 },
+  { id: 'team_loyalty', name: '❤️ 忠诚', desc: '在同一支车队效力3个赛季', icon: '❤️', rarity: 'common', check: (gs) => gs.seasonsAtCurrentTeam >= 3 },
+  { id: 'century', name: '💯 百分俱乐部', desc: '单赛季获得超过100分', icon: '💯', rarity: 'common', check: (gs) => gs.seasonPoints >= 100 },
+  { id: 'social_butterfly', name: '🤝 社交达人', desc: '与5位车手达到好友关系', icon: '🤝', rarity: 'common', check: (gs) => {
+    if (!gs.driverRelationships) return false;
+    return Object.values(gs.driverRelationships).filter(v => v >= 60).length >= 5;
+  }},
+  { id: 'first_pole', name: '🎯 首个杆位', desc: '获得你的第一个杆位', icon: '🎯', rarity: 'common', check: (gs) => (gs.careerPoles || 0) >= 1 },
+
+  // === 稀有 (Rare) ===
+  { id: 'five_wins', name: '⭐ 五冠王', desc: '职业生涯赢得5场分站冠军', icon: '⭐', rarity: 'rare', check: (gs) => gs.careerWins >= 5 },
+  { id: 'ten_podiums', name: '💎 常客', desc: '职业生涯10次登上领奖台', icon: '💎', rarity: 'rare', check: (gs) => gs.careerPodiums >= 10 },
+  { id: 'pole_master', name: '🎯 杆位大师', desc: '获得5次杆位', icon: '🎯', rarity: 'rare', check: (gs) => (gs.careerPoles || 0) >= 5 },
+  { id: 'rain_master', name: '🌧️ 雨神', desc: '在雨天比赛中获胜', icon: '🌧️', rarity: 'rare', check: (gs) => gs.rainWins >= 1 },
+  { id: 'comeback_king', name: '🔄 逆转之王', desc: '从P10以后发车获胜', icon: '🔄', rarity: 'rare', check: (gs) => gs.comebackWin >= 1 },
+  { id: 'underdog', name: '🐺 黑马', desc: '在排名后5的车队中获得领奖台', icon: '🐺', rarity: 'rare', check: (gs) => gs.underdogPodium >= 1 },
+  { id: 'double_century', name: '💰 200分赛季', desc: '单赛季获得超过200分', icon: '💰', rarity: 'rare', check: (gs) => gs.seasonPoints >= 200 },
+  { id: 'ironman_20', name: '🔩 钢铁侠', desc: '连续20场完赛', icon: '🔩', rarity: 'rare', check: (gs) => gs.consecutiveFinishes >= 20 },
+  { id: 'best_friend', name: '💚 挚友', desc: '与一位车手达到挚友关系(80+)', icon: '💚', rarity: 'rare', check: (gs) => {
+    if (!gs.driverRelationships) return false;
+    return Object.values(gs.driverRelationships).filter(v => v >= 80).length >= 1;
+  }},
+  { id: 'sprint_win', name: '🏁 冲刺赛冠军', desc: '赢得一场冲刺赛', icon: '🏁', rarity: 'rare', check: (gs) => (gs.sprintWins || 0) >= 1 },
+
+  // === 史诗 (Epic) ===
+  { id: 'champion', name: '👑 世界冠军', desc: '赢得世界冠军', icon: '👑', rarity: 'epic', check: (gs) => gs.championships >= 1 },
+  { id: 'ten_wins', name: '🔮 十胜', desc: '职业生涯赢得10场分站冠军', icon: '🔮', rarity: 'epic', check: (gs) => gs.careerWins >= 10 },
+  { id: 'twenty_podiums', name: '🌟 二十次领奖台', desc: '职业生涯20次登上领奖台', icon: '🌟', rarity: 'epic', check: (gs) => gs.careerPodiums >= 20 },
+  { id: 'pole_sweep', name: '🎪 杆位横扫', desc: '获得10次杆位', icon: '🎪', rarity: 'epic', check: (gs) => (gs.careerPoles || 0) >= 10 },
+  { id: 'perfect_weekend', name: '✨ 完美周末', desc: '杆位+冠军+最快圈(需在代码中追踪)', icon: '✨', rarity: 'epic', check: (gs) => (gs.perfectWeekends || 0) >= 1 },
+  { id: 'grand_slam', name: '🎖️ 大满贯', desc: '单赛季杆位+冠军+最多胜场', icon: '🎖️', rarity: 'epic', check: (gs) => gs.grandSlam === true },
+  { id: 'back_to_back', name: '🔗 连胜', desc: '连续3场分站冠军', icon: '🔗', rarity: 'epic', check: (gs) => (gs.consecutiveWins || 0) >= 3 },
+  { id: 'rain_dominance', name: '⛈️ 雨天统治', desc: '在雨天比赛中获得3场胜利', icon: '⛈️', rarity: 'epic', check: (gs) => (gs.rainWins || 0) >= 3 },
+  { id: 'comeback_legend', name: '🌅 逆转传奇', desc: '从P15以后发车获胜', icon: '🌅', rarity: 'epic', check: (gs) => (gs.comebackWin || 0) >= 1 && gs.comebackFromPos <= 15 },
+
+  // === 传说 (Legendary) ===
+  { id: 'double_champion', name: '👑👑 双冠王', desc: '赢得2次世界冠军', icon: '👑', rarity: 'legendary', check: (gs) => gs.championships >= 2 },
+  { id: 'triple_champion', name: '👑👑👑 三冠王', desc: '赢得3次世界冠军', icon: '👑', rarity: 'legendary', check: (gs) => gs.championships >= 3 },
+  { id: 'fifteen_wins', name: '💥 十五胜', desc: '职业生涯赢得15场分站冠军', icon: '💥', rarity: 'legendary', check: (gs) => gs.careerWins >= 15 },
+  { id: 'all_rounds', name: '🌍 赛季全勤完赛', desc: '单赛季全部24站完赛', icon: '🌍', rarity: 'legendary', check: (gs) => (gs.seasonFinishes || 0) >= 24 },
+  { id: 'max_stat', name: '💯 极限突破', desc: '任意一项属性达到100(MAX)', icon: '💯', rarity: 'legendary', check: (gs) => {
+    return Object.values(gs.stats).some(v => v >= 100);
+  }},
+  { id: 'fivestar_season', name: '⭐⭐⭐⭐⭐ 统治赛季', desc: '单赛季获得超过350分', icon: '⭐', rarity: 'legendary', check: (gs) => gs.seasonPoints >= 350 },
+  { id: 'paddock_king', name: '🏰 围场之王', desc: '与所有车手达到好友关系(60+)', icon: '🏰', rarity: 'legendary', check: (gs) => {
+    if (!gs.driverRelationships) return false;
+    return Object.values(gs.driverRelationships).filter(v => v >= 60).length >= 19;
+  }},
+  { id: 'flawless_season', name: '🏆🏆 完美赛季', desc: '单赛季全部24站完赛且零DNF，同时获得冠军', icon: '🏆', rarity: 'legendary', check: (gs) => gs.flawlessSeason === true },
 ];
+
+const RARITY_INFO = {
+  common: { label: '普通', color: 'var(--text-secondary)', bgColor: 'rgba(128,128,128,0.15)' },
+  rare: { label: '稀有', color: 'var(--blue)', bgColor: 'rgba(59,130,246,0.15)' },
+  epic: { label: '史诗', color: 'var(--purple)', bgColor: 'rgba(168,85,247,0.15)' },
+  legendary: { label: '传说', color: 'var(--gold)', bgColor: 'rgba(234,179,8,0.15)' },
+};
 
 // ============ SPONSORS ============
 
@@ -2146,27 +2362,45 @@ function applyRaceResults(raceResults) {
       gameState.careerPoints += playerPts;
       gameState.seasonPoints += playerPts;
       gameState.consecutiveFinishes++;
+      gameState.seasonFinishes = (gameState.seasonFinishes || 0) + 1;
+
+      // Track consecutive wins
+      if (playerResult.position === 1) {
+        gameState.consecutiveWins = (gameState.consecutiveWins || 0) + 1;
+      } else {
+        gameState.consecutiveWins = 0;
+      }
 
       if (playerResult.position === 1) {
         gameState.careerWins++;
         // Rain win achievement tracking
         if (gameState.currentWeather && gameState.currentWeather.wetMod > 0.2) {
-          gameState.rainWins++;
+          gameState.rainWins = (gameState.rainWins || 0) + 1;
         }
         // Comeback win (started P10 or worse)
         if (raceState && raceState.qualifyingResult && raceState.qualifyingResult.playerPos >= 10) {
-          gameState.comebackWin++;
+          gameState.comebackWin = (gameState.comebackWin || 0) + 1;
+          gameState.comebackFromPos = raceState.qualifyingResult.playerPos;
+        }
+        // Sprint win tracking
+        if (raceState.sprintResult && raceState.sprintResult.position === 1) {
+          gameState.sprintWins = (gameState.sprintWins || 0) + 1;
+        }
+        // Perfect weekend (pole + win)
+        if (raceState.qualifyingResult && raceState.qualifyingResult.playerPos === 1) {
+          gameState.perfectWeekends = (gameState.perfectWeekends || 0) + 1;
         }
       }
       if (playerResult.position <= 3) {
         gameState.careerPodiums++;
         // Underdog podium (team in bottom 5)
         if (gameState.teamIdx >= 5) {
-          gameState.underdogPodium++;
+          gameState.underdogPodium = (gameState.underdogPodium || 0) + 1;
         }
       }
     } else {
       gameState.consecutiveFinishes = 0;
+      gameState.consecutiveWins = 0;
     }
 
     gameState.raceResults.push({
@@ -2370,6 +2604,14 @@ function generateContractOffers() {
 
 function acceptContract(offer) {
   const teamIdx = TEAMS.findIndex(t => t.id === offer.team.id);
+  const oldTeamIdx = gameState.teamIdx;
+
+  // Process transfer cascade before updating player's team
+  const transferLog = [];
+  if (oldTeamIdx !== teamIdx) {
+    processTransferCascade(teamIdx, transferLog);
+  }
+
   gameState.teamId = offer.team.id;
   gameState.teamIdx = teamIdx;
   gameState.salary = offer.salary;
@@ -2386,6 +2628,9 @@ function acceptContract(offer) {
   } else {
     gameState.reputation.teamTrust = 50; // Reset trust with new team
   }
+
+  // Store transfer log for display
+  gameState.lastTransferLog = transferLog;
 }
 
 function startNewSeason() {
@@ -2400,6 +2645,10 @@ function startNewSeason() {
   gameState.raceResults = [];
   gameState.trainedThisWeek = false;
   gameState.seasonPoints = 0;
+  gameState.seasonFinishes = 0;
+  gameState.consecutiveWins = 0;
+  gameState.flawlessSeason = false;
+  gameState.grandSlam = false;
 
   // Track team loyalty
   if (gameState.teamId === oldTeamId) {
@@ -4094,28 +4343,65 @@ function renderCalendar() {
 function renderAchievements() {
   showScreen('achievements-screen');
 
+  const rarityOrder = ['common', 'rare', 'epic', 'legendary'];
+  const rarityLabels = { common: '普通', rare: '稀有', epic: '史诗', legendary: '传说' };
+  const rarityIcons = { common: '⚪', rare: '🔵', epic: '🟣', legendary: '🟡' };
+
+  const unlockedCount = gameState.achievements.length;
+  const totalCount = ACHIEVEMENTS.length;
+
   document.getElementById('achievements-screen').innerHTML = `
     <button class="back-btn" onclick="renderHub()">← 返回主页</button>
     <div class="section-header">
       <h2 class="font-display">🏅 成就</h2>
-      <span class="badge badge-gold">${gameState.achievements.length}/${ACHIEVEMENTS.length}</span>
+      <span class="badge badge-gold">${unlockedCount}/${totalCount}</span>
     </div>
 
-    <div style="display:grid;grid-template-columns:1fr;gap:10px;">
-      ${ACHIEVEMENTS.map(ach => {
-        const unlocked = gameState.achievements.includes(ach.id);
+    <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
+      ${rarityOrder.map(r => {
+        const rAchs = ACHIEVEMENTS.filter(a => a.rarity === r);
+        const rUnlocked = rAchs.filter(a => gameState.achievements.includes(a.id)).length;
+        const info = RARITY_INFO[r];
         return `
-          <div class="card" style="padding:16px;display:flex;align-items:center;gap:14px;${unlocked ? 'border-color:var(--gold);' : 'opacity:0.5;'}">
-            <span style="font-size:2rem;${unlocked ? '' : 'filter:grayscale(1);'}">${ach.icon}</span>
-            <div style="flex:1;">
-              <div style="font-weight:700;${unlocked ? 'color:var(--gold);' : ''}">${ach.name}</div>
-              <div style="font-size:0.8rem;color:var(--text-secondary);">${ach.desc}</div>
-            </div>
-            ${unlocked ? '<span class="badge badge-gold">已解锁</span>' : '<span class="badge" style="background:rgba(255,255,255,0.05);color:var(--text-muted);">未解锁</span>'}
+          <div style="padding:6px 12px;border-radius:8px;background:${info.bgColor};border:1px solid ${info.color}33;">
+            <span style="font-size:0.8rem;color:${info.color};font-weight:600;">${rarityIcons[r]} ${rarityLabels[r]}</span>
+            <span style="font-size:0.75rem;color:var(--text-muted);margin-left:4px;">${rUnlocked}/${rAchs.length}</span>
           </div>
         `;
       }).join('')}
     </div>
+
+    ${rarityOrder.map(rarity => {
+      const achs = ACHIEVEMENTS.filter(a => a.rarity === rarity);
+      const info = RARITY_INFO[rarity];
+      return `
+        <div style="margin-bottom:20px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+            <span style="font-size:1rem;">${rarityIcons[rarity]}</span>
+            <h3 style="font-size:0.95rem;color:${info.color};font-weight:700;margin:0;">${rarityLabels[rarity]}</h3>
+            <div style="flex:1;height:1px;background:${info.color}33;"></div>
+          </div>
+          <div style="display:grid;gap:8px;">
+            ${achs.map(ach => {
+              const unlocked = gameState.achievements.includes(ach.id);
+              return `
+                <div class="card" style="padding:14px;display:flex;align-items:center;gap:12px;${unlocked ? `border-color:${info.color};background:${info.bgColor};` : 'opacity:0.45;'}">
+                  <span style="font-size:1.8rem;${unlocked ? '' : 'filter:grayscale(1);'}">${ach.icon}</span>
+                  <div style="flex:1;">
+                    <div style="font-weight:700;font-size:0.9rem;${unlocked ? `color:${info.color};` : ''}">${ach.name}</div>
+                    <div style="font-size:0.78rem;color:var(--text-secondary);">${ach.desc}</div>
+                  </div>
+                  ${unlocked
+                    ? `<span style="font-size:0.7rem;padding:3px 8px;border-radius:6px;background:${info.color}22;color:${info.color};font-weight:600;">已解锁</span>`
+                    : `<span style="font-size:0.7rem;padding:3px 8px;border-radius:6px;background:rgba(255,255,255,0.05);color:var(--text-muted);">未解锁</span>`
+                  }
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }).join('')}
   `;
 }
 
@@ -5258,11 +5544,66 @@ function acceptContractOffer() {
   if (raceState.selectedOffer === null || raceState.selectedOffer === undefined) return;
   const offer = raceState.contractOffers[raceState.selectedOffer];
   acceptContract(offer);
+
+  // Show transfer cascade info if there were transfers
+  if (gameState.lastTransferLog && gameState.lastTransferLog.length > 0) {
+    showTransferResults(offer);
+  } else {
+    startNewSeason();
+    raceState = null;
+    renderHub();
+    saveGame();
+    showToast(`已签约 ${offer.team.short}！${gameState.season} 赛季开始！`, 'success');
+  }
+}
+
+function showTransferResults(offer) {
+  showScreen('contract-screen');
+  const log = gameState.lastTransferLog;
+  document.getElementById('contract-screen').innerHTML = `
+    <div class="section-header">
+      <h2 class="font-display">🔄 转会连锁反应</h2>
+    </div>
+    <div class="card" style="padding:16px;margin-bottom:16px;">
+      <div style="font-size:0.9rem;line-height:1.6;">
+        <strong>你的转会引发了一系列连锁反应：</strong><br>
+        <span style="color:var(--text-secondary);font-size:0.85rem;">你加入了 ${offer.team.name}，被替代的车手也需要找到新去处。</span>
+      </div>
+    </div>
+
+    <div style="display:grid;gap:10px;">
+      ${log.map((t, i) => `
+        <div class="card" style="padding:14px;display:flex;align-items:center;gap:12px;">
+          <div style="font-size:1.5rem;">${i + 1}</div>
+          <div style="flex:1;">
+            <div style="font-weight:700;font-size:0.95rem;">${t.driver}</div>
+            <div style="font-size:0.8rem;color:var(--text-secondary);">
+              ${t.from} → <span style="color:var(--gold);font-weight:600;">${t.to}</span>
+            </div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="card" style="margin-top:16px;padding:14px;background:var(--bg-card-hover);">
+      <div style="font-size:0.85rem;color:var(--text-secondary);">
+        💡 围场中每位车手的转会都可能引发连锁反应。表现不佳的车手可能被替补车手替换，而实力强劲的车手则会找到新的归宿。
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-lg" onclick="finishTransferAndStart()" style="margin-top:16px;">
+      确认并开始新赛季 →
+    </button>
+  `;
+}
+
+function finishTransferAndStart() {
+  gameState.lastTransferLog = null;
   startNewSeason();
   raceState = null;
   renderHub();
   saveGame();
-  showToast(`已签约 ${offer.team.short}！${gameState.season} 赛季开始！`, 'success');
+  showToast(`${gameState.season - 1}赛季结束！${gameState.season}赛季开始！`, 'success');
 }
 
 // ============ LOAD AND RESUME ============
