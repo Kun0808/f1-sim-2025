@@ -2471,7 +2471,198 @@ function renderHub() {
         🏆 赛季结束
       </button>
     `}
+    <button class="btn" onclick="confirmRetire()" style="margin-top:8px;width:100%;background:transparent;border:1px solid var(--f1-red);color:var(--f1-red);opacity:0.7;">
+      🏳️ 退役结束职业生涯
+    </button>
   `;
+}
+
+function confirmRetire() {
+  showScreen('hub-screen');
+  document.getElementById('hub-screen').innerHTML = `
+    <div class="section-header">
+      <h2 class="font-display">🏳️ 确认退役</h2>
+    </div>
+    <div class="card" style="text-align:center;padding:30px;">
+      <div style="font-size:3rem;margin-bottom:16px;">🏳️</div>
+      <h3>你确定要退役吗？</h3>
+      <p class="text-muted" style="margin-top:8px;line-height:1.6;">
+        退役后将结束你的F1职业生涯，并展示完整的生涯总结。<br>
+        此操作不可撤销，但你可以开始新的职业生涯。
+      </p>
+      <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;">
+        <button class="btn" onclick="renderHub()" style="background:transparent;border:1px solid var(--border);">继续 racing</button>
+        <button class="btn btn-primary" onclick="retire()" style="background:var(--f1-red);">确认退役</button>
+      </div>
+    </div>
+  `;
+}
+
+function retire() {
+  const player = getPlayer();
+  const team = TEAMS[gameState.teamIdx];
+  const standings = getDriverStandings();
+  const playerStanding = standings.find(d => d.isPlayer);
+  const teamStandings = getTeamStandings();
+  const playerTeamStanding = teamStandings.find(ts => ts.teamId === gameState.teamId);
+
+  // Calculate career stats
+  const totalRaces = gameState.raceResults.length;
+  const wins = gameState.careerWins || 0;
+  const podiums = gameState.careerPodiums || 0;
+  const poles = gameState.careerPoles || 0;
+  const points = gameState.careerPoints || 0;
+  const championships = gameState.championships || 0;
+  const dnfs = gameState.raceResults.filter(r => r.dnf).length;
+  const bestFinish = gameState.raceResults.reduce((best, r) => {
+    if (r.dnf) return best;
+    return r.position < best ? r.position : best;
+  }, 99);
+  const avgPos = totalRaces > 0
+    ? (gameState.raceResults.reduce((sum, r) => sum + (r.dnf ? 20 : r.position), 0) / totalRaces).toFixed(1)
+    : '-';
+  const winRate = totalRaces > 0 ? ((wins / totalRaces) * 100).toFixed(1) : '0';
+  const podiumRate = totalRaces > 0 ? ((podiums / totalRaces) * 100).toFixed(1) : '0';
+
+  // Career rating
+  let rating = 50;
+  rating += championships * 15;
+  rating += wins * 3;
+  rating += podiums * 1.5;
+  rating += poles * 1;
+  rating += (gameState.seasonNumber - 1) * 2;
+  rating += (gameState.reputation.driverRespect - 50) * 0.2;
+  rating = Math.min(100, Math.max(0, Math.round(rating)));
+
+  let ratingLabel, ratingColor, ratingDesc;
+  if (rating >= 95) { ratingLabel = 'S+'; ratingColor = 'var(--gold)'; ratingDesc = 'F1传奇 — 你将被载入史册'; }
+  else if (rating >= 85) { ratingLabel = 'S'; ratingColor = 'var(--gold)'; ratingDesc = '名人堂级别 — 伟大的职业生涯'; }
+  else if (rating >= 75) { ratingLabel = 'A'; ratingColor = 'var(--green)'; ratingDesc = '顶级车手 — 令人印象深刻'; }
+  else if (rating >= 60) { ratingLabel = 'B'; ratingColor = 'var(--f1-red)'; ratingDesc = '优秀的F1车手'; }
+  else if (rating >= 40) { ratingLabel = 'C'; ratingColor = 'var(--text-secondary)'; ratingDesc = '稳健的职业生涯'; }
+  else { ratingLabel = 'D'; ratingColor = 'var(--text-muted)'; ratingDesc = '还有进步空间'; }
+
+  // Unlock achievements
+  const newAchievements = checkAchievements();
+
+  showScreen('hub-screen');
+  document.getElementById('hub-screen').innerHTML = `
+    <div style="text-align:center;padding:30px 20px;">
+      <div style="font-size:4rem;margin-bottom:12px;">🏁</div>
+      <h1 class="font-display" style="margin-bottom:8px;">职业生涯结束</h1>
+      <p style="font-size:1.1rem;color:var(--text-secondary);">
+        ${gameState.playerName} · ${team.name}
+      </p>
+      <p style="font-size:0.85rem;color:var(--text-muted);margin-top:4px;">
+        ${gameState.season - gameState.seasonNumber + 1} - ${gameState.season} · ${gameState.seasonNumber}个赛季
+      </p>
+    </div>
+
+    <div class="card" style="text-align:center;padding:30px;border:2px solid ${ratingColor};box-shadow:0 0 30px rgba(255,215,0,0.1);">
+      <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:8px;">生涯评级</div>
+      <div style="font-family:'Orbitron';font-size:4rem;font-weight:900;color:${ratingColor};line-height:1;">${ratingLabel}</div>
+      <div style="margin-top:8px;font-size:0.95rem;color:var(--text-secondary);">${ratingDesc}</div>
+      <div style="margin-top:8px;font-size:0.75rem;color:var(--text-muted);">综合评分: ${rating}/100</div>
+    </div>
+
+    <div class="card" style="padding:20px;margin-top:12px;">
+      <h3 style="margin-bottom:16px;font-size:0.9rem;color:var(--text-secondary);">生涯数据总览</h3>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;text-align:center;">
+        <div>
+          <div style="font-family:'Orbitron';font-size:2rem;font-weight:800;color:var(--gold);">${championships}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">世界冠军</div>
+        </div>
+        <div>
+          <div style="font-family:'Orbitron';font-size:2rem;font-weight:800;color:var(--gold);">${wins}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">分站冠军</div>
+        </div>
+        <div>
+          <div style="font-family:'Orbitron';font-size:2rem;font-weight:800;">${podiums}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">领奖台</div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;text-align:center;">
+        <div>
+          <div style="font-family:'Orbitron';font-size:1.5rem;font-weight:700;">${poles}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">杆位</div>
+        </div>
+        <div>
+          <div style="font-family:'Orbitron';font-size:1.5rem;font-weight:700;color:var(--f1-red);">${points}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">生涯积分</div>
+        </div>
+        <div>
+          <div style="font-family:'Orbitron';font-size:1.5rem;font-weight:700;">${totalRaces}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">参赛场次</div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;text-align:center;">
+        <div>
+          <div style="font-family:'Orbitron';font-size:1.3rem;font-weight:700;color:var(--green);">${bestFinish <= 99 ? 'P' + bestFinish : '-'}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">最佳完赛</div>
+        </div>
+        <div>
+          <div style="font-family:'Orbitron';font-size:1.3rem;font-weight:700;">${avgPos}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">平均名次</div>
+        </div>
+        <div>
+          <div style="font-family:'Orbitron';font-size:1.3rem;font-weight:700;color:var(--f1-red);">${dnfs}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">退赛次数</div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;text-align:center;">
+        <div>
+          <div style="font-family:'Orbitron';font-size:1.3rem;font-weight:700;color:var(--green);">${winRate}%</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">胜率</div>
+        </div>
+        <div>
+          <div style="font-family:'Orbitron';font-size:1.3rem;font-weight:700;color:var(--gold);">${podiumRate}%</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">领奖台率</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:16px;margin-top:12px;">
+      <h3 style="margin-bottom:12px;font-size:0.9rem;color:var(--text-secondary);">声誉</h3>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;font-size:0.85rem;">
+        <div>🏎️ 车队信任: <strong style="color:var(--text-primary);">${gameState.reputation.teamTrust}</strong></div>
+        <div>📺 媒体关系: <strong style="color:var(--text-primary);">${gameState.reputation.mediaRelation}</strong></div>
+        <div>👥 车迷人气: <strong style="color:var(--text-primary);">${gameState.reputation.fanPopularity}</strong></div>
+        <div>🤝 车手尊重: <strong style="color:var(--text-primary);">${gameState.reputation.driverRespect}</strong></div>
+      </div>
+    </div>
+
+    ${gameState.achievements.length > 0 ? `
+      <div class="card" style="padding:16px;margin-top:12px;border-color:var(--gold);">
+        <h3 style="margin-bottom:12px;font-size:0.9rem;color:var(--gold);">🏅 已解锁成就 (${gameState.achievements.length}/${ACHIEVEMENTS.length})</h3>
+        ${gameState.achievements.map(id => {
+          const a = ACHIEVEMENTS.find(a => a.id === id);
+          return a ? `<div style="padding:4px 0;font-size:0.85rem;">${a.icon} <strong>${a.name}</strong> <span style="color:var(--text-muted);">- ${a.desc}</span></div>` : '';
+        }).join('')}
+      </div>
+    ` : ''}
+
+    <div style="text-align:center;padding:30px 20px;margin-top:12px;">
+      <p style="color:var(--text-muted);font-size:0.85rem;line-height:1.6;">
+        感谢游玩 F1 职业生涯模拟器！<br>
+        ${gameState.playerName} 的传奇故事将永远被铭记。
+      </p>
+      <button class="btn btn-primary btn-lg" onclick="resetGame()" style="margin-top:16px;">
+        🏎️ 开始新的职业生涯
+      </button>
+    </div>
+  `;
+
+  // Clear save
+  localStorage.removeItem('f1_career_save');
+}
+
+function resetGame() {
+  gameState = null;
+  raceState = null;
+  showStartScreen();
 }
 
 function confirmQuickSim() {
