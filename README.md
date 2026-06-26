@@ -74,7 +74,7 @@
 
 ### 趣味内容
 - **28条围场趣闻**: 新闻系统中新增大量车手梗和趣味新闻
-  - Verstappen打F1游戏不用自己、Hamilton的vegan食谱、Alonso的El Plan、Leclerc的钢琴演奏、Tsunoda的无线电脏话等
+  - Verstappen打F1游戏不用自己、Hamilton的vegan食谱、Alonso的El Plan、Leclerc的钢琴演奏等
 - **车手专属梗**: 每位车手在详情页有独特的趣味描述
 
 ### 其他
