@@ -136,6 +136,9 @@ h3 { font-size: 1.2rem; font-weight: 600; }
   opacity: 0.4;
   cursor: not-allowed;
 }
+.btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
 .btn-primary {
   background: var(--f1-red);
   color: white;
@@ -224,8 +227,18 @@ h3 { font-size: 1.2rem; font-weight: 600; }
 }
 .bg-card.selected {
   border-color: var(--f1-red);
-  background: rgba(225, 6, 0, 0.08);
-  box-shadow: 0 0 20px var(--f1-red-glow);
+  background: rgba(225, 6, 0, 0.12);
+  box-shadow: 0 0 0 3px rgba(225,6,0,0.3), 0 0 24px var(--f1-red-glow);
+  transform: scale(1.02);
+}
+.bg-card.selected::after {
+  content: '✓ 已选择';
+  display: block;
+  text-align: center;
+  margin-top: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--f1-red);
 }
 .bg-card .bg-icon {
   font-size: 2rem;
@@ -277,8 +290,18 @@ h3 { font-size: 1.2rem; font-weight: 600; }
 }
 .team-select-card.selected {
   border-color: var(--f1-red);
-  background: rgba(225,6,0,0.08);
-  box-shadow: 0 0 0 2px rgba(225,6,0,0.2);
+  background: rgba(225,6,0,0.12);
+  box-shadow: 0 0 0 3px rgba(225,6,0,0.3), 0 0 20px rgba(225,6,0,0.15);
+  transform: scale(1.03);
+}
+.team-select-card.selected::after {
+  content: '✓ 已选择';
+  display: block;
+  text-align: center;
+  margin-top: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--f1-red);
 }
 .team-select-header {
   display: flex;
@@ -665,8 +688,56 @@ h3 { font-size: 1.2rem; font-weight: 600; }
 }
 .contract-card.selected {
   border-color: var(--gold);
-  box-shadow: 0 0 20px rgba(255,215,0,0.2);
-  background: rgba(255,215,0,0.05);
+  border-width: 2px;
+  box-shadow: 0 0 0 3px rgba(255,215,0,0.3), 0 0 24px rgba(255,215,0,0.2);
+  background: rgba(255,215,0,0.08);
+  transform: scale(1.01);
+}
+.contract-card.selected::before {
+  content: '✓';
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--gold);
+}
+.contract-card { position: relative; }
+
+/* ---- Replace Driver / Existing Driver / Sponsor Selection ---- */
+.replace-driver-card,
+.existing-driver-card {
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+}
+.replace-driver-card:hover,
+.existing-driver-card:hover {
+  border-color: var(--f1-red);
+  transform: translateY(-2px);
+  background: var(--bg-card-hover);
+}
+.replace-driver-card.selected,
+.existing-driver-card.selected {
+  border-color: var(--f1-red);
+  background: rgba(225,6,0,0.12);
+  box-shadow: 0 0 0 3px rgba(225,6,0,0.3), 0 0 24px rgba(225,6,0,0.15);
+  transform: scale(1.02);
+}
+.replace-driver-card.selected::after,
+.existing-driver-card.selected::after {
+  content: '✓ 已选择';
+  display: block;
+  text-align: center;
+  margin-top: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--f1-red);
 }
 .contract-team {
   font-weight: 700;
@@ -796,7 +867,7 @@ h3 { font-size: 1.2rem; font-weight: 600; }
 /* ---- Training ---- */
 .training-option {
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   border-radius: 10px;
   padding: 16px;
   cursor: pointer;
@@ -805,10 +876,17 @@ h3 { font-size: 1.2rem; font-weight: 600; }
 }
 .training-option:hover {
   border-color: var(--f1-red);
+  background: var(--bg-card-hover);
+  transform: translateX(4px);
+  box-shadow: 0 0 16px rgba(225,6,0,0.1);
+}
+.training-option:active {
+  transform: scale(0.98);
 }
 .training-option.selected {
   border-color: var(--f1-red);
-  background: rgba(225,6,0,0.05);
+  background: rgba(225,6,0,0.08);
+  box-shadow: 0 0 0 3px rgba(225,6,0,0.2);
 }
 .training-option .train-name {
   font-weight: 600;

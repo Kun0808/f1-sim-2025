@@ -143,6 +143,9 @@ h3 { font-size: 1.2rem; font-weight: 600; }
   opacity: 0.4;
   cursor: not-allowed;
 }
+.btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
 .btn-primary {
   background: var(--f1-red);
   color: white;
@@ -231,8 +234,18 @@ h3 { font-size: 1.2rem; font-weight: 600; }
 }
 .bg-card.selected {
   border-color: var(--f1-red);
-  background: rgba(225, 6, 0, 0.08);
-  box-shadow: 0 0 20px var(--f1-red-glow);
+  background: rgba(225, 6, 0, 0.12);
+  box-shadow: 0 0 0 3px rgba(225,6,0,0.3), 0 0 24px var(--f1-red-glow);
+  transform: scale(1.02);
+}
+.bg-card.selected::after {
+  content: '✓ 已选择';
+  display: block;
+  text-align: center;
+  margin-top: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--f1-red);
 }
 .bg-card .bg-icon {
   font-size: 2rem;
@@ -284,8 +297,18 @@ h3 { font-size: 1.2rem; font-weight: 600; }
 }
 .team-select-card.selected {
   border-color: var(--f1-red);
-  background: rgba(225,6,0,0.08);
-  box-shadow: 0 0 0 2px rgba(225,6,0,0.2);
+  background: rgba(225,6,0,0.12);
+  box-shadow: 0 0 0 3px rgba(225,6,0,0.3), 0 0 20px rgba(225,6,0,0.15);
+  transform: scale(1.03);
+}
+.team-select-card.selected::after {
+  content: '✓ 已选择';
+  display: block;
+  text-align: center;
+  margin-top: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--f1-red);
 }
 .team-select-header {
   display: flex;
@@ -672,8 +695,56 @@ h3 { font-size: 1.2rem; font-weight: 600; }
 }
 .contract-card.selected {
   border-color: var(--gold);
-  box-shadow: 0 0 20px rgba(255,215,0,0.2);
-  background: rgba(255,215,0,0.05);
+  border-width: 2px;
+  box-shadow: 0 0 0 3px rgba(255,215,0,0.3), 0 0 24px rgba(255,215,0,0.2);
+  background: rgba(255,215,0,0.08);
+  transform: scale(1.01);
+}
+.contract-card.selected::before {
+  content: '✓';
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--gold);
+}
+.contract-card { position: relative; }
+
+/* ---- Replace Driver / Existing Driver / Sponsor Selection ---- */
+.replace-driver-card,
+.existing-driver-card {
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+}
+.replace-driver-card:hover,
+.existing-driver-card:hover {
+  border-color: var(--f1-red);
+  transform: translateY(-2px);
+  background: var(--bg-card-hover);
+}
+.replace-driver-card.selected,
+.existing-driver-card.selected {
+  border-color: var(--f1-red);
+  background: rgba(225,6,0,0.12);
+  box-shadow: 0 0 0 3px rgba(225,6,0,0.3), 0 0 24px rgba(225,6,0,0.15);
+  transform: scale(1.02);
+}
+.replace-driver-card.selected::after,
+.existing-driver-card.selected::after {
+  content: '✓ 已选择';
+  display: block;
+  text-align: center;
+  margin-top: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--f1-red);
 }
 .contract-team {
   font-weight: 700;
@@ -803,7 +874,7 @@ h3 { font-size: 1.2rem; font-weight: 600; }
 /* ---- Training ---- */
 .training-option {
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   border-radius: 10px;
   padding: 16px;
   cursor: pointer;
@@ -812,10 +883,17 @@ h3 { font-size: 1.2rem; font-weight: 600; }
 }
 .training-option:hover {
   border-color: var(--f1-red);
+  background: var(--bg-card-hover);
+  transform: translateX(4px);
+  box-shadow: 0 0 16px rgba(225,6,0,0.1);
+}
+.training-option:active {
+  transform: scale(0.98);
 }
 .training-option.selected {
   border-color: var(--f1-red);
-  background: rgba(225,6,0,0.05);
+  background: rgba(225,6,0,0.08);
+  box-shadow: 0 0 0 3px rgba(225,6,0,0.2);
 }
 .training-option .train-name {
   font-weight: 600;
@@ -3123,7 +3201,7 @@ function renderExistingDriverSelect() {
                 const idx = teamIdx * 2 + di;
                 const overall = Math.round((d.pace + d.consistency + d.wet + d.defend + d.attack + d.raceIQ) / 6);
                 return `
-                  <div class="existing-driver-card" data-idx="${idx}" style="background:var(--bg-card);padding:12px;cursor:pointer;transition:all 0.2s;"
+                  <div class="existing-driver-card" data-idx="${idx}" style="border-radius:0;"
                     onclick="selectExistingDriver(${idx})">
                     <div style="font-weight:700;font-size:0.95rem;">${d.name}</div>
                     <div style="font-size:0.75rem;color:var(--text-muted);margin:4px 0;">综合: <span style="color:var(--gold);font-weight:700;">${overall}</span></div>
@@ -3149,14 +3227,10 @@ function renderExistingDriverSelect() {
 }
 
 function selectExistingDriver(idx) {
-  document.querySelectorAll('.existing-driver-card').forEach(c => {
-    c.style.borderColor = 'transparent';
-    c.style.background = 'var(--bg-card)';
-  });
+  document.querySelectorAll('.existing-driver-card').forEach(c => c.classList.remove('selected'));
   const card = document.querySelector(`.existing-driver-card[data-idx="${idx}"]`);
   if (card) {
-    card.style.borderColor = 'var(--gold)';
-    card.style.background = 'var(--bg-card-hover)';
+    card.classList.add('selected');
   }
   selectedExistingDriverIdx = idx;
   document.getElementById('confirm-existing-btn').disabled = false;
@@ -3409,7 +3483,7 @@ function renderReplaceDriverSelect(name, bgId, teamIdx) {
       ${[d1, d2].map((d, di) => {
         const overall = Math.round((d.pace + d.consistency + d.wet + d.defend + d.attack + d.raceIQ) / 6);
         return `
-          <div class="replace-driver-card" data-slot="${di}" style="background:var(--bg-card);border:2px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;transition:all 0.2s;text-align:center;">
+          <div class="replace-driver-card" data-slot="${di}" style="text-align:center;">
             <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;">${di === 0 ? '一号车手' : '二号车手'}</div>
             <div style="font-size:1.1rem;font-weight:700;margin-bottom:8px;">${d.name}</div>
             <div style="font-size:0.8rem;color:var(--gold);font-weight:700;margin-bottom:8px;">综合 ${overall}</div>
@@ -3444,12 +3518,8 @@ function renderReplaceDriverSelect(name, bgId, teamIdx) {
 
   container.querySelectorAll('.replace-driver-card').forEach(card => {
     card.addEventListener('click', () => {
-      container.querySelectorAll('.replace-driver-card').forEach(c => {
-        c.style.borderColor = 'var(--border)';
-        c.style.background = 'var(--bg-card)';
-      });
-      card.style.borderColor = 'var(--f1-red)';
-      card.style.background = 'var(--bg-card-hover)';
+      container.querySelectorAll('.replace-driver-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
       selectedSlot = parseInt(card.dataset.slot);
       document.getElementById('confirm-replace-btn').disabled = false;
     });

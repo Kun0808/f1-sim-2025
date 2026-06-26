@@ -2178,7 +2178,7 @@ function renderExistingDriverSelect() {
                 const idx = teamIdx * 2 + di;
                 const overall = Math.round((d.pace + d.consistency + d.wet + d.defend + d.attack + d.raceIQ) / 6);
                 return `
-                  <div class="existing-driver-card" data-idx="${idx}" style="background:var(--bg-card);padding:12px;cursor:pointer;transition:all 0.2s;"
+                  <div class="existing-driver-card" data-idx="${idx}" style="border-radius:0;"
                     onclick="selectExistingDriver(${idx})">
                     <div style="font-weight:700;font-size:0.95rem;">${d.name}</div>
                     <div style="font-size:0.75rem;color:var(--text-muted);margin:4px 0;">综合: <span style="color:var(--gold);font-weight:700;">${overall}</span></div>
@@ -2204,14 +2204,10 @@ function renderExistingDriverSelect() {
 }
 
 function selectExistingDriver(idx) {
-  document.querySelectorAll('.existing-driver-card').forEach(c => {
-    c.style.borderColor = 'transparent';
-    c.style.background = 'var(--bg-card)';
-  });
+  document.querySelectorAll('.existing-driver-card').forEach(c => c.classList.remove('selected'));
   const card = document.querySelector(`.existing-driver-card[data-idx="${idx}"]`);
   if (card) {
-    card.style.borderColor = 'var(--gold)';
-    card.style.background = 'var(--bg-card-hover)';
+    card.classList.add('selected');
   }
   selectedExistingDriverIdx = idx;
   document.getElementById('confirm-existing-btn').disabled = false;
@@ -2464,7 +2460,7 @@ function renderReplaceDriverSelect(name, bgId, teamIdx) {
       ${[d1, d2].map((d, di) => {
         const overall = Math.round((d.pace + d.consistency + d.wet + d.defend + d.attack + d.raceIQ) / 6);
         return `
-          <div class="replace-driver-card" data-slot="${di}" style="background:var(--bg-card);border:2px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;transition:all 0.2s;text-align:center;">
+          <div class="replace-driver-card" data-slot="${di}" style="text-align:center;">
             <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;">${di === 0 ? '一号车手' : '二号车手'}</div>
             <div style="font-size:1.1rem;font-weight:700;margin-bottom:8px;">${d.name}</div>
             <div style="font-size:0.8rem;color:var(--gold);font-weight:700;margin-bottom:8px;">综合 ${overall}</div>
@@ -2499,12 +2495,8 @@ function renderReplaceDriverSelect(name, bgId, teamIdx) {
 
   container.querySelectorAll('.replace-driver-card').forEach(card => {
     card.addEventListener('click', () => {
-      container.querySelectorAll('.replace-driver-card').forEach(c => {
-        c.style.borderColor = 'var(--border)';
-        c.style.background = 'var(--bg-card)';
-      });
-      card.style.borderColor = 'var(--f1-red)';
-      card.style.background = 'var(--bg-card-hover)';
+      container.querySelectorAll('.replace-driver-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
       selectedSlot = parseInt(card.dataset.slot);
       document.getElementById('confirm-replace-btn').disabled = false;
     });
