@@ -635,7 +635,7 @@ function createNewGame(name, backgroundId, selectedTeamIdx) {
   // Apply background modifiers
   const stats = {};
   for (const key in baseStats) {
-    stats[key] = Math.max(50, Math.min(99, baseStats[key] + (bg.statMod[key] || 0)));
+    stats[key] = Math.max(50, Math.min(100, baseStats[key] + (bg.statMod[key] || 0)));
   }
 
   // Create AI drivers with team assignments
@@ -990,6 +990,7 @@ function applyDecisionEffects(effects) {
 
 function train(statKey) {
   if (gameState.trainedThisWeek) return false;
+  if (gameState.stats[statKey] >= 100) return false;
 
   const currentVal = gameState.stats[statKey];
   const gain = 4 + Math.floor(Math.random() * 4); // 4-7
@@ -2078,17 +2079,23 @@ function renderTraining() {
     ` : `
       <p class="text-muted" style="margin-bottom:16px;">选择训练重点。提升一项属性的同时，另一项会略微下降。</p>
       <div id="training-list">
-        ${Object.keys(gameState.stats).map(key => `
-          <div class="training-option" data-stat="${key}" onclick="selectTraining('${key}')">
+        ${Object.keys(gameState.stats).map(key => {
+          const val = gameState.stats[key];
+          const isMax = val >= 100;
+          return `
+          <div class="training-option" data-stat="${key}" ${isMax ? 'style="opacity:0.5;cursor:not-allowed;"' : `onclick="selectTraining('${key}')"`}>
             <div class="train-name">${STAT_NAMES[key]}</div>
             <div class="train-effect">
-              当前: <strong style="color:${STAT_COLORS[key]}">${gameState.stats[key]}</strong>
-              → 预计提升至 <strong style="color:var(--green)">${Math.min(gameState.stats[key] + 4, 100)}~${Math.min(gameState.stats[key] + 7, 100)}</strong>
-              ${gameState.stats[key] >= 97 ? '<span style="color:var(--gold);font-size:0.75rem;"> (接近上限)</span>' : ''}
-              · 随机另一属性 -1
+              当前: <strong style="color:${STAT_COLORS[key]}">${isMax ? '<span style="color:var(--gold);">MAX</span>' : val}</strong>
+              ${isMax ? '<span style="color:var(--gold);font-size:0.75rem;"> (已满级)</span>' : `
+                → 预计提升至 <strong style="color:var(--green)">${Math.min(val + 4, 100)}~${Math.min(val + 7, 100)}</strong>
+                ${val >= 95 ? '<span style="color:var(--gold);font-size:0.75rem;"> (接近上限)</span>' : ''}
+                · 随机另一属性 -1
+              `}
             </div>
           </div>
-        `).join('')}
+          `;
+        }).join('')}
       </div>
     `}
   `;
@@ -2131,15 +2138,19 @@ function renderDriverProfile() {
       <div class="divider"></div>
 
       <h3 style="margin-bottom:12px;font-size:0.9rem;color:var(--text-secondary);">能力属性</h3>
-      ${Object.keys(gameState.stats).map(key => `
+      ${Object.keys(gameState.stats).map(key => {
+        const val = gameState.stats[key];
+        const isMax = val >= 100;
+        return `
         <div class="stat-row">
           <span class="stat-label">${STAT_NAMES[key].split(' ')[1]}</span>
           <div class="stat-bar-bg">
-            <div class="stat-bar-fill" style="width:${gameState.stats[key]}%;background:${STAT_COLORS[key]}"></div>
+            <div class="stat-bar-fill" style="width:${val}%;background:${STAT_COLORS[key]}"></div>
           </div>
-          <span class="stat-value" style="color:${STAT_COLORS[key]}">${gameState.stats[key]}</span>
+          <span class="stat-value" style="color:${isMax ? 'var(--gold)' : STAT_COLORS[key]}">${isMax ? 'MAX' : val}</span>
         </div>
-      `).join('')}
+        `;
+      }).join('')}
 
       <div class="divider"></div>
 
