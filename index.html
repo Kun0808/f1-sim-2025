@@ -2152,59 +2152,59 @@ function getRaceDecisions(raceIdx, state) {
 // ============ ACHIEVEMENTS ============
 
 const ACHIEVEMENTS = [
-  // === 普通 (Common) ===
+  // === 普通 (Common) - 首赛季/基础里程碑 ===
+  { id: 'first_points', name: '📍 首获积分', desc: '第一次获得锦标赛积分', icon: '📍', rarity: 'common', check: (gs) => gs.careerPoints >= 1 },
   { id: 'first_podium', name: '🥉 初登领奖台', desc: '第一次登上领奖台', icon: '🥉', rarity: 'common', check: (gs) => gs.careerPodiums >= 1 },
   { id: 'first_win', name: '🏆 首胜', desc: '赢得你的第一场分站冠军', icon: '🏆', rarity: 'common', check: (gs) => gs.careerWins >= 1 },
-  { id: 'first_points', name: '📍 首获积分', desc: '第一次获得锦标赛积分', icon: '📍', rarity: 'common', check: (gs) => gs.careerPoints >= 1 },
+  { id: 'first_pole', name: '🎯 首个杆位', desc: '获得你的第一个杆位', icon: '🎯', rarity: 'common', check: (gs) => (gs.careerPoles || 0) >= 1 },
   { id: 'ironman', name: '🛡️ 铁人', desc: '连续10场完赛', icon: '🛡️', rarity: 'common', check: (gs) => gs.consecutiveFinishes >= 10 },
   { id: 'team_loyalty', name: '❤️ 忠诚', desc: '在同一支车队效力3个赛季', icon: '❤️', rarity: 'common', check: (gs) => gs.seasonsAtCurrentTeam >= 3 },
   { id: 'century', name: '💯 百分俱乐部', desc: '单赛季获得超过100分', icon: '💯', rarity: 'common', check: (gs) => gs.seasonPoints >= 100 },
-  { id: 'social_butterfly', name: '🤝 社交达人', desc: '与5位车手达到好友关系', icon: '🤝', rarity: 'common', check: (gs) => {
+  { id: 'social_butterfly', name: '🤝 社交达人', desc: '与5位车手达到好友关系(60+)', icon: '🤝', rarity: 'common', check: (gs) => {
     if (!gs.driverRelationships) return false;
     return Object.values(gs.driverRelationships).filter(v => v >= 60).length >= 5;
   }},
-  { id: 'first_pole', name: '🎯 首个杆位', desc: '获得你的第一个杆位', icon: '🎯', rarity: 'common', check: (gs) => (gs.careerPoles || 0) >= 1 },
+  { id: 'best_friend', name: '💚 挚友', desc: '与一位车手达到挚友关系(80+)', icon: '💚', rarity: 'common', check: (gs) => {
+    if (!gs.driverRelationships) return false;
+    return Object.values(gs.driverRelationships).filter(v => v >= 80).length >= 1;
+  }},
 
-  // === 稀有 (Rare) ===
+  // === 稀有 (Rare) - 多赛季积累/需要技巧 ===
   { id: 'five_wins', name: '⭐ 五冠王', desc: '职业生涯赢得5场分站冠军', icon: '⭐', rarity: 'rare', check: (gs) => gs.careerWins >= 5 },
   { id: 'ten_podiums', name: '💎 常客', desc: '职业生涯10次登上领奖台', icon: '💎', rarity: 'rare', check: (gs) => gs.careerPodiums >= 10 },
   { id: 'pole_master', name: '🎯 杆位大师', desc: '获得5次杆位', icon: '🎯', rarity: 'rare', check: (gs) => (gs.careerPoles || 0) >= 5 },
   { id: 'rain_master', name: '🌧️ 雨神', desc: '在雨天比赛中获胜', icon: '🌧️', rarity: 'rare', check: (gs) => gs.rainWins >= 1 },
-  { id: 'comeback_king', name: '🔄 逆转之王', desc: '从P10以后发车获胜', icon: '🔄', rarity: 'rare', check: (gs) => gs.comebackWin >= 1 },
   { id: 'underdog', name: '🐺 黑马', desc: '在排名后5的车队中获得领奖台', icon: '🐺', rarity: 'rare', check: (gs) => gs.underdogPodium >= 1 },
   { id: 'double_century', name: '💰 200分赛季', desc: '单赛季获得超过200分', icon: '💰', rarity: 'rare', check: (gs) => gs.seasonPoints >= 200 },
   { id: 'ironman_20', name: '🔩 钢铁侠', desc: '连续20场完赛', icon: '🔩', rarity: 'rare', check: (gs) => gs.consecutiveFinishes >= 20 },
-  { id: 'best_friend', name: '💚 挚友', desc: '与一位车手达到挚友关系(80+)', icon: '💚', rarity: 'rare', check: (gs) => {
-    if (!gs.driverRelationships) return false;
-    return Object.values(gs.driverRelationships).filter(v => v >= 80).length >= 1;
-  }},
   { id: 'sprint_win', name: '🏁 冲刺赛冠军', desc: '赢得一场冲刺赛', icon: '🏁', rarity: 'rare', check: (gs) => (gs.sprintWins || 0) >= 1 },
+  { id: 'perfect_weekend', name: '✨ 完美周末', desc: '同一站获得杆位并夺冠', icon: '✨', rarity: 'rare', check: (gs) => (gs.perfectWeekends || 0) >= 1 },
+  { id: 'all_rounds', name: '🌍 赛季全勤', desc: '单赛季全部24站完赛', icon: '🌍', rarity: 'rare', check: (gs) => (gs.seasonFinishes || 0) >= 24 },
 
-  // === 史诗 (Epic) ===
+  // === 史诗 (Epic) - 重大成就/需要多个赛季的卓越表现 ===
   { id: 'champion', name: '👑 世界冠军', desc: '赢得世界冠军', icon: '👑', rarity: 'epic', check: (gs) => gs.championships >= 1 },
   { id: 'ten_wins', name: '🔮 十胜', desc: '职业生涯赢得10场分站冠军', icon: '🔮', rarity: 'epic', check: (gs) => gs.careerWins >= 10 },
   { id: 'twenty_podiums', name: '🌟 二十次领奖台', desc: '职业生涯20次登上领奖台', icon: '🌟', rarity: 'epic', check: (gs) => gs.careerPodiums >= 20 },
   { id: 'pole_sweep', name: '🎪 杆位横扫', desc: '获得10次杆位', icon: '🎪', rarity: 'epic', check: (gs) => (gs.careerPoles || 0) >= 10 },
-  { id: 'perfect_weekend', name: '✨ 完美周末', desc: '杆位+冠军+最快圈(需在代码中追踪)', icon: '✨', rarity: 'epic', check: (gs) => (gs.perfectWeekends || 0) >= 1 },
   { id: 'grand_slam', name: '🎖️ 大满贯', desc: '单赛季杆位+冠军+最多胜场', icon: '🎖️', rarity: 'epic', check: (gs) => gs.grandSlam === true },
   { id: 'back_to_back', name: '🔗 连胜', desc: '连续3场分站冠军', icon: '🔗', rarity: 'epic', check: (gs) => (gs.consecutiveWins || 0) >= 3 },
   { id: 'rain_dominance', name: '⛈️ 雨天统治', desc: '在雨天比赛中获得3场胜利', icon: '⛈️', rarity: 'epic', check: (gs) => (gs.rainWins || 0) >= 3 },
-  { id: 'comeback_legend', name: '🌅 逆转传奇', desc: '从P15以后发车获胜', icon: '🌅', rarity: 'epic', check: (gs) => (gs.comebackWin || 0) >= 1 && gs.comebackFromPos <= 15 },
+  { id: 'comeback_king', name: '🔄 逆转之王', desc: '从P10或更后发车获胜', icon: '🔄', rarity: 'epic', check: (gs) => gs.comebackWin >= 1 },
+  { id: 'max_stat', name: '💯 极限突破', desc: '任意一项属性达到100(MAX)', icon: '💯', rarity: 'epic', check: (gs) => {
+    return Object.values(gs.stats).some(v => v >= 100);
+  }},
 
-  // === 传说 (Legendary) ===
+  // === 传说 (Legendary) - 近乎不可能/职业生涯定义级 ===
   { id: 'double_champion', name: '👑👑 双冠王', desc: '赢得2次世界冠军', icon: '👑', rarity: 'legendary', check: (gs) => gs.championships >= 2 },
   { id: 'triple_champion', name: '👑👑👑 三冠王', desc: '赢得3次世界冠军', icon: '👑', rarity: 'legendary', check: (gs) => gs.championships >= 3 },
   { id: 'fifteen_wins', name: '💥 十五胜', desc: '职业生涯赢得15场分站冠军', icon: '💥', rarity: 'legendary', check: (gs) => gs.careerWins >= 15 },
-  { id: 'all_rounds', name: '🌍 赛季全勤完赛', desc: '单赛季全部24站完赛', icon: '🌍', rarity: 'legendary', check: (gs) => (gs.seasonFinishes || 0) >= 24 },
-  { id: 'max_stat', name: '💯 极限突破', desc: '任意一项属性达到100(MAX)', icon: '💯', rarity: 'legendary', check: (gs) => {
-    return Object.values(gs.stats).some(v => v >= 100);
-  }},
   { id: 'fivestar_season', name: '⭐⭐⭐⭐⭐ 统治赛季', desc: '单赛季获得超过350分', icon: '⭐', rarity: 'legendary', check: (gs) => gs.seasonPoints >= 350 },
   { id: 'paddock_king', name: '🏰 围场之王', desc: '与所有车手达到好友关系(60+)', icon: '🏰', rarity: 'legendary', check: (gs) => {
     if (!gs.driverRelationships) return false;
     return Object.values(gs.driverRelationships).filter(v => v >= 60).length >= 19;
   }},
   { id: 'flawless_season', name: '🏆🏆 完美赛季', desc: '单赛季全部24站完赛且零DNF，同时获得冠军', icon: '🏆', rarity: 'legendary', check: (gs) => gs.flawlessSeason === true },
+  { id: 'comeback_legend', name: '🌅 逆转传奇', desc: '从P15或更后发车获胜', icon: '🌅', rarity: 'legendary', check: (gs) => (gs.comebackWin || 0) >= 1 && (gs.comebackFromPos || 0) >= 15 },
 ];
 
 const RARITY_INFO = {
