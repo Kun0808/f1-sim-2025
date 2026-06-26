@@ -4351,6 +4351,23 @@ function finishQuickSim(simResults) {
   const isChampion = finalPos === 1;
   if (isChampion) gameState.championships++;
 
+  const quickTeamStandings = getTeamStandings();
+  const quickPlayerTeamStanding = quickTeamStandings.find(ts => ts.teamId === gameState.teamId);
+
+  // Calculate projected income for quick sim
+  const qWins = gameState.raceResults.filter(r => !r.dnf && r.position === 1).length;
+  const qP2 = gameState.raceResults.filter(r => !r.dnf && r.position === 2).length;
+  const qP3 = gameState.raceResults.filter(r => !r.dnf && r.position === 3).length;
+  let qBonus = qWins * 2.0 + qP2 * 1.0 + qP3 * 0.5;
+  if (isChampion) qBonus += 10;
+  if (quickPlayerTeamStanding) {
+    if (quickPlayerTeamStanding.position === 1) qBonus += 5;
+    else if (quickPlayerTeamStanding.position === 2) qBonus += 3;
+    else if (quickPlayerTeamStanding.position === 3) qBonus += 2;
+  }
+  const qSponsor = gameState.sponsor ? (gameState.sponsor.salary || 0) : 0;
+  const qTotal = (gameState.salary || 5) + qSponsor + qBonus;
+
   document.getElementById('hub-screen').innerHTML = `
     <div class="section-header">
       <h2 class="font-display">⚡ 赛季模拟完成</h2>
@@ -4425,67 +4442,41 @@ function finishQuickSim(simResults) {
       </div>
     ` : ''}
 
-    <button class="btn btn-primary btn-lg" onclick="showContractOffers()" style="margin-top:16px;">
-      进入合同谈判 →
-    </button>
-  `;
-
-  // Note: income is calculated in advanceSeason() which is called after contract signing
-  // So we show projected income here based on current stats
-  const projectedWins = gameState.raceResults.filter(r => !r.dnf && r.position === 1).length;
-  const projectedPodiums = gameState.raceResults.filter(r => !r.dnf && r.position <= 3).length;
-  const projectedP2 = gameState.raceResults.filter(r => !r.dnf && r.position === 2).length;
-  const projectedP3 = gameState.raceResults.filter(r => !r.dnf && r.position === 3).length;
-  let projectedBonus = projectedWins * 2.0 + projectedP2 * 1.0 + projectedP3 * 0.5;
-  if (isChampion) projectedBonus += 10;
-  if (teamStandings) {
-    const ts = teamStandings.find(ts => ts.teamId === gameState.teamId);
-    if (ts) {
-      if (ts.position === 1) projectedBonus += 5;
-      else if (ts.position === 2) projectedBonus += 3;
-      else if (ts.position === 3) projectedBonus += 2;
-    }
-  }
-  const projectedSponsor = gameState.sponsor ? (gameState.sponsor.salary || 0) : 0;
-  const projectedTotal = (gameState.salary || 5) + projectedSponsor + projectedBonus;
-
-  // Insert income summary before the button
-  const btn = document.querySelector('#season-end-screen .btn-primary');
-  if (btn) {
-    const incomeDiv = document.createElement('div');
-    incomeDiv.className = 'card';
-    incomeDiv.style.cssText = 'margin-top:12px;padding:14px;border-color:var(--green);';
-    incomeDiv.innerHTML = `
+    <div class="card" style="padding:14px;margin-top:12px;border-color:var(--green);">
       <h3 style="margin-bottom:10px;font-size:0.9rem;color:var(--text-secondary);">💰 赛季收入预估</h3>
       <div style="display:grid;gap:6px;font-size:0.85rem;">
         <div style="display:flex;justify-content:space-between;">
           <span style="color:var(--text-muted);">💵 基础年薪</span>
           <span style="color:var(--green);font-weight:600;">$${(gameState.salary || 5).toFixed(1)}M</span>
         </div>
-        ${projectedSponsor > 0 ? `
+        ${qSponsor > 0 ? `
         <div style="display:flex;justify-content:space-between;">
           <span style="color:var(--text-muted);">🤝 赞助商收入</span>
-          <span style="color:var(--green);font-weight:600;">$${projectedSponsor.toFixed(1)}M</span>
+          <span style="color:var(--green);font-weight:600;">$${qSponsor.toFixed(1)}M</span>
         </div>` : ''}
         <div style="display:flex;justify-content:space-between;">
           <span style="color:var(--text-muted);">🏆 比赛奖金</span>
-          <span style="color:var(--green);font-weight:600;">$${projectedBonus.toFixed(1)}M</span>
+          <span style="color:var(--green);font-weight:600;">$${qBonus.toFixed(1)}M</span>
         </div>
-        ${projectedBonus > 0 ? `
+        ${qBonus > 0 ? `
         <div style="font-size:0.75rem;color:var(--text-muted);padding-left:12px;">
-          ${projectedWins > 0 ? `分站冠军 ×${projectedWins} = $${(projectedWins * 2.0).toFixed(1)}M<br>` : ''}
-          ${projectedP2 > 0 ? `亚军 ×${projectedP2} = $${(projectedP2 * 1.0).toFixed(1)}M<br>` : ''}
-          ${projectedP3 > 0 ? `季军 ×${projectedP3} = $${(projectedP3 * 0.5).toFixed(1)}M<br>` : ''}
+          ${qWins > 0 ? `分站冠军 ×${qWins} = $${(qWins * 2.0).toFixed(1)}M<br>` : ''}
+          ${qP2 > 0 ? `亚军 ×${qP2} = $${(qP2 * 1.0).toFixed(1)}M<br>` : ''}
+          ${qP3 > 0 ? `季军 ×${qP3} = $${(qP3 * 0.5).toFixed(1)}M<br>` : ''}
           ${isChampion ? `世界冠军奖金 = $10.0M<br>` : ''}
+          ${quickPlayerTeamStanding && quickPlayerTeamStanding.position <= 3 ? `车队排名 #${quickPlayerTeamStanding.position} 奖金 = $${quickPlayerTeamStanding.position === 1 ? '5.0' : quickPlayerTeamStanding.position === 2 ? '3.0' : '2.0'}M<br>` : ''}
         </div>` : ''}
         <div style="display:flex;justify-content:space-between;padding-top:6px;border-top:1px solid var(--border);">
           <span style="font-weight:600;">总计</span>
-          <span style="color:var(--green);font-weight:700;font-family:'Orbitron';">$${projectedTotal.toFixed(1)}M</span>
+          <span style="color:var(--green);font-weight:700;font-family:'Orbitron';">$${qTotal.toFixed(1)}M</span>
         </div>
       </div>
-    `;
-    btn.parentElement.insertBefore(incomeDiv, btn);
-  }
+    </div>
+
+    <button class="btn btn-primary btn-lg" onclick="showContractOffers()" style="margin-top:16px;">
+      进入合同谈判 →
+    </button>
+  `;
 
   saveGame();
 }
@@ -6175,6 +6166,58 @@ function endSeason() {
       进入合同谈判 →
     </button>
   `;
+
+  // Show projected income breakdown
+  const projectedWins = gameState.raceResults.filter(r => !r.dnf && r.position === 1).length;
+  const projectedP2 = gameState.raceResults.filter(r => !r.dnf && r.position === 2).length;
+  const projectedP3 = gameState.raceResults.filter(r => !r.dnf && r.position === 3).length;
+  let projectedBonus = projectedWins * 2.0 + projectedP2 * 1.0 + projectedP3 * 0.5;
+  if (isChampion) projectedBonus += 10;
+  if (playerTeamStanding) {
+    if (playerTeamStanding.position === 1) projectedBonus += 5;
+    else if (playerTeamStanding.position === 2) projectedBonus += 3;
+    else if (playerTeamStanding.position === 3) projectedBonus += 2;
+  }
+  const projectedSponsor = gameState.sponsor ? (gameState.sponsor.salary || 0) : 0;
+  const projectedTotal = (gameState.salary || 5) + projectedSponsor + projectedBonus;
+
+  const incomeBtn = document.querySelector('#season-end-screen .btn-primary');
+  if (incomeBtn) {
+    const incomeDiv = document.createElement('div');
+    incomeDiv.className = 'card';
+    incomeDiv.style.cssText = 'margin-top:12px;padding:14px;border-color:var(--green);';
+    incomeDiv.innerHTML = `
+      <h3 style="margin-bottom:10px;font-size:0.9rem;color:var(--text-secondary);">💰 赛季收入预估</h3>
+      <div style="display:grid;gap:6px;font-size:0.85rem;">
+        <div style="display:flex;justify-content:space-between;">
+          <span style="color:var(--text-muted);">💵 基础年薪</span>
+          <span style="color:var(--green);font-weight:600;">$${(gameState.salary || 5).toFixed(1)}M</span>
+        </div>
+        ${projectedSponsor > 0 ? `
+        <div style="display:flex;justify-content:space-between;">
+          <span style="color:var(--text-muted);">🤝 赞助商收入</span>
+          <span style="color:var(--green);font-weight:600;">$${projectedSponsor.toFixed(1)}M</span>
+        </div>` : ''}
+        <div style="display:flex;justify-content:space-between;">
+          <span style="color:var(--text-muted);">🏆 比赛奖金</span>
+          <span style="color:var(--green);font-weight:600;">$${projectedBonus.toFixed(1)}M</span>
+        </div>
+        ${projectedBonus > 0 ? `
+        <div style="font-size:0.75rem;color:var(--text-muted);padding-left:12px;">
+          ${projectedWins > 0 ? `分站冠军 ×${projectedWins} = $${(projectedWins * 2.0).toFixed(1)}M<br>` : ''}
+          ${projectedP2 > 0 ? `亚军 ×${projectedP2} = $${(projectedP2 * 1.0).toFixed(1)}M<br>` : ''}
+          ${projectedP3 > 0 ? `季军 ×${projectedP3} = $${(projectedP3 * 0.5).toFixed(1)}M<br>` : ''}
+          ${isChampion ? `世界冠军奖金 = $10.0M<br>` : ''}
+          ${playerTeamStanding && playerTeamStanding.position <= 3 ? `车队排名 #${playerTeamStanding.position} 奖金 = $${playerTeamStanding.position === 1 ? '5.0' : playerTeamStanding.position === 2 ? '3.0' : '2.0'}M<br>` : ''}
+        </div>` : ''}
+        <div style="display:flex;justify-content:space-between;padding-top:6px;border-top:1px solid var(--border);">
+          <span style="font-weight:600;">总计</span>
+          <span style="color:var(--green);font-weight:700;font-family:'Orbitron';">$${projectedTotal.toFixed(1)}M</span>
+        </div>
+      </div>
+    `;
+    incomeBtn.parentElement.insertBefore(incomeDiv, incomeBtn);
+  }
 
   saveGame();
 }
