@@ -553,6 +553,11 @@ h3 { font-size: 1.2rem; font-weight: 600; }
   margin: 20px 0;
   animation: fadeIn 0.3s ease;
 }
+.decision-box.legendary-event {
+  border-color: var(--gold);
+  background: rgba(234,179,8,0.06);
+  box-shadow: 0 0 24px rgba(234,179,8,0.15);
+}
 .decision-box .decision-title {
   font-weight: 700;
   font-size: 1.1rem;

@@ -517,7 +517,286 @@ const RANDOM_EVENTS = [
   },
 ];
 
-// ============ DRIVER SOCIAL SYSTEM ============
+// ============ LEGENDARY DRIVER EVENTS ============
+// Special events triggered by legendary F1 figures, based on real relationships
+
+const LEGENDARY_EVENTS = [
+  {
+    id: 'webber_mentor',
+    legendary: 'Mark Webber',
+    icon: '🐨',
+    title: '🐨 韦伯的经纪人邀约',
+    desc: '退役名宿马克·韦伯——现役车手皮亚斯特里的经纪人——主动联系你："我看了你的数据，你有冠军的潜质。如果你愿意，我可以做你的经纪人，帮你争取更好的合同条件。"',
+    type: 'legendary_mentor',
+    // Trigger: Season 2+, any team
+    condition: (gs) => gs.seasonNumber >= 2 && !gs.legendaryMentor,
+    options: [
+      {
+        label: 'A', text: '接受韦伯为经纪人 - 他帮皮亚斯特里拿下了McLaren席位',
+        effect: { raceIQ: 3, driverRep: 5, mediaRep: 3 },
+        special: 'webber_mentor',
+      },
+      {
+        label: 'B', text: '婉拒 - 我更喜欢自己掌控职业生涯',
+        effect: { consistency: 3, raceIQ: 1, driverRep: 2 },
+      },
+      {
+        label: 'C', text: '请教他的转会建议 - 但不签经纪约',
+        effect: { raceIQ: 4, mediaRep: 2 },
+      },
+    ],
+  },
+  {
+    id: 'lauda_advice',
+    legendary: 'Niki Lauda',
+    icon: '🎩',
+    title: '🎩 劳达的遗志',
+    desc: '你在Mercedes车队的车房里发现了一封尼基·劳达生前写给车队老板的信。信中提到："如果你看到一个有胆识的车手，不要犹豫，给他机会。"信封上写着你的名字。',
+    type: 'legendary_mentor',
+    condition: (gs) => gs.teamIdx === 2, // Mercedes only
+    options: [
+      {
+        label: 'A', text: '深受鼓舞 - 在Mercedes全力证明自己',
+        effect: { pace: 4, consistency: 2, raceIQ: 3, teamTrust: 5 },
+      },
+      {
+        label: 'B', text: '将信交给Toto Wolff - 让他看到劳达的远见',
+        effect: { teamTrust: 8, mediaRep: 3, raceIQ: 2 },
+      },
+      {
+        label: 'C', text: '收好这封信 - 作为终身的激励',
+        effect: { consistency: 4, raceIQ: 2, driverRep: 3 },
+      },
+    ],
+  },
+  {
+    id: 'vettel_masterclass',
+    legendary: 'Sebastian Vettel',
+    icon: '🐯',
+    title: '🐯 维特尔大师课',
+    desc: '四届世界冠军塞巴斯蒂安·维特尔在赛后主动找到你："我看了你这几站的排位赛数据，你的刹车点选择可以优化。来我的模拟器基地，我教你几个技巧。"',
+    type: 'legendary_mentor',
+    condition: (gs) => gs.careerPodiums >= 1 && gs.seasonNumber >= 1,
+    options: [
+      {
+        label: 'A', text: '欣然前往 - 向四冠王学习！',
+        effect: { pace: 5, raceIQ: 4, consistency: 3 },
+        special: 'vettel_mentor',
+      },
+      {
+        label: 'B', text: '请教他的雨战技巧 - 雨天是我的弱项',
+        effect: { wet: 6, raceIQ: 2, driverRep: 3 },
+      },
+      {
+        label: 'C', text: '请教他的心理调节 - 如何应对争冠压力',
+        effect: { consistency: 5, raceIQ: 3, driverRep: 4 },
+      },
+    ],
+  },
+  {
+    id: 'alonso_fox',
+    legendary: 'Fernando Alonso',
+    icon: '🦊',
+    title: '🦊 围场老狐狸',
+    desc: '阿隆索在围场里拦住你，嘴角带着标志性的微笑："年轻人，我在这条赛道上跑了20年。想不想知道第8号弯的刹车秘诀？不过有条件——下次比赛让我过去，我就告诉你。"',
+    type: 'legendary_mentor',
+    condition: (gs) => gs.seasonNumber >= 2 && gs.careerWins >= 1,
+    options: [
+      {
+        label: 'A', text: '接受交易 - 学到技巧再说',
+        effect: { pace: 3, raceIQ: 4, defend: -2 },
+        special: 'alonso_deal',
+      },
+      {
+        label: 'B', text: '拒绝交易 - 我自己研究赛道',
+        effect: { consistency: 3, raceIQ: 2, driverRep: 4 },
+      },
+      {
+        label: 'C', text: '反将一军 - "费尔南多，你的秘诀防得住我吗？"',
+        effect: { attack: 4, driverRep: 5, raceIQ: 1, risk: 1 },
+      },
+    ],
+  },
+  {
+    id: 'rosberg_analysis',
+    legendary: 'Nico Rosberg',
+    icon: '📊',
+    title: '📊 罗斯伯格的数据分析',
+    desc: '2016年世界冠军尼科·罗斯伯格——现役F1分析师——在Sky Sports的节目上用3D数据分析了你的驾驶风格："他的入弯速度比汉密尔顿快0.2秒，但出弯损失了0.3秒。如果修正这一点，他能快半秒。"',
+    type: 'legendary_mentor',
+    condition: (gs) => gs.careerPoles >= 1 && gs.seasonNumber >= 1,
+    options: [
+      {
+        label: 'A', text: '认真研究数据 - 罗斯伯格的分析不会错',
+        effect: { pace: 4, raceIQ: 3, consistency: 2 },
+      },
+      {
+        label: 'B', text: '在社交媒体上感谢他 - 公开互动',
+        effect: { mediaRep: 5, fanPop: 4, pace: 2 },
+      },
+      {
+        label: 'C', text: '不服气 - 下场用成绩证明我的出弯没问题',
+        effect: { pace: 3, attack: 3, driverRep: 2, risk: 2 },
+      },
+    ],
+  },
+  {
+    id: 'coulthard_commentary',
+    legendary: 'David Coulthard',
+    icon: '🎙️',
+    title: '🎙️ 库特哈德的评论',
+    desc: '13胜得主大卫·库特哈德在BBC的专栏中写道："这位年轻车手让我想起了年轻的自己——有速度，有野心，但需要在关键弯道更聪明。如果他学会保护轮胎，前途不可限量。"',
+    type: 'legendary_mentor',
+    condition: (gs) => gs.consecutiveFinishes >= 5,
+    options: [
+      {
+        label: 'A', text: '虚心学习轮胎管理 - DC说得对',
+        effect: { consistency: 4, raceIQ: 3, pace: 1 },
+      },
+      {
+        label: 'B', text: '邀请DC来车队参观 - 深入交流',
+        effect: { mediaRep: 4, raceIQ: 2, teamTrust: 2, driverRep: 3 },
+      },
+      {
+        label: 'C', text: '不以为然 - 我的轮胎管理没问题',
+        effect: { pace: 2, attack: 2, consistency: -1, driverRep: -1 },
+      },
+    ],
+  },
+  {
+    id: 'stewart_safety',
+    legendary: 'Jackie Stewart',
+    icon: '🛡️',
+    title: '🛡️ 斯图尔特爵士的关怀',
+    desc: '三届世界冠军杰基·斯图尔特爵士在围场里拉住你："年轻人，我当年推动赛道安全改革是有原因的。我看了你上站比赛的那个惊险超车——太冒险了。冠军是跑出来的，不是赌出来的。"',
+    type: 'legendary_mentor',
+    condition: (gs) => gs.raceResults && gs.raceResults.some(r => r.dnf),
+    options: [
+      {
+        label: 'A', text: '虚心接受 - 爵士说得对，安全第一',
+        effect: { consistency: 5, raceIQ: 3, driverRep: 4 },
+      },
+      {
+        label: 'B', text: '解释自己的判断 - 那个超车是经过计算的',
+        effect: { raceIQ: 3, attack: 2, driverRep: 3 },
+      },
+      {
+        label: 'C', text: '微笑着点头 - 但心里不认同',
+        effect: { attack: 3, pace: 1, consistency: -2, driverRep: 1 },
+      },
+    ],
+  },
+  {
+    id: 'murray_call',
+    legendary: 'Murray Walker',
+    icon: '📢',
+    title: '📢 默里·沃克的声音',
+    desc: "传奇解说员默里·沃克的声音在围场回荡——他特意为你录制了一段分析：\"Unless I'm very much mistaken, and I usually am not, this young driver has the raw talent to go all the way!\"这段话在社交媒体上疯传。",
+    type: 'legendary_mentor',
+    condition: (gs) => gs.careerWins >= 2,
+    options: [
+      {
+        label: 'A', text: '深受感动 - 被传奇解说员认可',
+        effect: { mediaRep: 6, fanPop: 8, driverRep: 4, pace: 2 },
+      },
+      {
+        label: 'B', text: '转发并感谢沃克 - 扩大影响力',
+        effect: { fanPop: 7, mediaRep: 5, consistency: 1 },
+      },
+      {
+        label: 'C', text: '低调处理 - 让赛道表现说话',
+        effect: { consistency: 3, raceIQ: 2, driverRep: 3 },
+      },
+    ],
+  },
+  {
+    id: 'damon_hill_pressure',
+    legendary: 'Damon Hill',
+    icon: '👑',
+    title: '👑 希尔关于冠军压力',
+    desc: '1996年世界冠军达蒙·希尔私下找到你："我父亲死于赛车，我自己也经历了无数次质疑才拿到冠军。争冠的压力会把你压垮——除非你学会与它共存。想知道我是怎么做到的吗？"',
+    type: 'legendary_mentor',
+    condition: (gs) => {
+      const standings = gs.drivers || [];
+      const player = standings.find(d => d.isPlayer);
+      return player && player.points > 0 && gs.seasonNumber >= 1;
+    },
+    options: [
+      {
+        label: 'A', text: '认真倾听 - 冠军的心理调适最重要',
+        effect: { consistency: 4, raceIQ: 3, driverRep: 5 },
+      },
+      {
+        label: 'B', text: '分享自己的压力来源 - 坦诚交流',
+        effect: { consistency: 3, raceIQ: 2, driverRep: 6, mediaRep: 2 },
+      },
+      {
+        label: 'C', text: '"谢谢，但我有我自己的方式"',
+        effect: { pace: 2, attack: 2, consistency: -1, driverRep: 1 },
+      },
+    ],
+  },
+  {
+    id: 'keke_rosberg_style',
+    legendary: 'Keke Rosberg',
+    icon: '😎',
+    title: '😎 科科·罗斯伯格的风格',
+    desc: '1982年世界冠军科科·罗斯伯格——尼科的父亲——在围场里用他标志性的芬兰式幽默对你说："冠军不是靠开得快赢的，是靠别人退赛赢的。开玩笑的。但说真的，学会在关键时刻保持冷静，比任何时候都快重要。"',
+    type: 'legendary_mentor',
+    condition: (gs) => gs.rainWins >= 1,
+    options: [
+      {
+        label: 'A', text: '"科科，教我怎么在压力下保持冷静"',
+        effect: { consistency: 5, raceIQ: 3, wet: 2 },
+      },
+      {
+        label: 'B', text: '反问他的冠军秘诀 - 1982年只赢了1场就夺冠',
+        effect: { raceIQ: 4, consistency: 2, driverRep: 3 },
+      },
+      {
+        label: 'C', text: '一起喝杯咖啡聊聊天 - 围场前辈的智慧',
+        effect: { consistency: 3, raceIQ: 2, driverRep: 4, mediaRep: 2 },
+      },
+    ],
+  },
+];
+
+// Check and trigger legendary events (called during race week)
+function checkLegendaryEvent() {
+  // 15% chance per race week if no legendary event this season
+  if (gameState.legendaryEventUsed) return null;
+  if (Math.random() > 0.15) return null;
+
+  // Find eligible events
+  const eligible = LEGENDARY_EVENTS.filter(e => {
+    try {
+      return !e.condition || e.condition(gameState);
+    } catch (err) {
+      return false;
+    }
+  });
+
+  if (eligible.length === 0) return null;
+
+  // Pick one randomly
+  const event = eligible[Math.floor(Math.random() * eligible.length)];
+  gameState.legendaryEventUsed = true;
+
+  return event;
+}
+
+// Apply legendary event special effects
+function applyLegendarySpecial(special) {
+  if (special === 'webber_mentor') {
+    gameState.legendaryMentor = 'Mark Webber';
+    // Better contract offers in future
+    gameState.reputation.driverRespect = Math.min(100, (gameState.reputation.driverRespect || 0) + 3);
+  } else if (special === 'vettel_mentor') {
+    gameState.legendaryMentor = 'Sebastian Vettel';
+  } else if (special === 'alonso_deal') {
+    gameState.alonsoDeal = true;
+  }
+}
 
 // Team principals with personalities
 const TEAM_PRINCIPALS = [
@@ -1083,6 +1362,19 @@ function getRaceDecisions(raceIdx, state) {
     });
   }
 
+  // Segment 3.5: Legendary driver event (checked before segment 4)
+  const legendaryEvent = checkLegendaryEvent();
+  if (legendaryEvent) {
+    allDecisions.push({
+      segment: 3.5,
+      title: legendaryEvent.title,
+      desc: legendaryEvent.desc,
+      options: legendaryEvent.options,
+      isLegendaryEvent: true,
+      legendaryName: legendaryEvent.legendary,
+    });
+  }
+
   // Segment 4: Late race decision - 60% chance for a second random event (different from segment 2)
   const usedEventTypes = allDecisions.filter(d => d.isRandomEvent).map(d => d.eventType);
   const availableEvents = RANDOM_EVENTS.filter(e => !usedEventTypes.includes(e.type) || RANDOM_EVENTS.length <= usedEventTypes.length);
@@ -1304,6 +1596,7 @@ function createNewGame(name, backgroundId, selectedTeamIdx, replaceSlot) {
     totalEarnings: 0,
     money: 15, // Starting balance in $M - tight budget early on
     socialUsedThisWeek: false,
+    legendaryEventUsed: false,
   };
 
   return gameState;
@@ -1872,6 +2165,7 @@ function startNewSeason() {
   gameState.raceResults = [];
   gameState.trainedThisWeek = false;
   gameState.socialUsedThisWeek = false;
+  gameState.legendaryEventUsed = false;
   gameState.seasonPoints = 0;
   gameState.seasonFinishes = 0;
   gameState.consecutiveWins = 0;
@@ -2053,6 +2347,7 @@ function loadGame() {
       if (gameState.totalEarnings === undefined) gameState.totalEarnings = 0;
       if (gameState.money === undefined) gameState.money = 15;
       if (gameState.sponsorYearsLeft === undefined) gameState.sponsorYearsLeft = 0;
+      if (gameState.legendaryEventUsed === undefined) gameState.legendaryEventUsed = false;
       return true;
     }
     return false;
@@ -2343,6 +2638,7 @@ function createGameAsExistingDriver(driverIdx) {
     totalEarnings: 0,
     money: 15,
     socialUsedThisWeek: false,
+    legendaryEventUsed: false,
   };
 
   showScreen('hub-screen');
@@ -4585,7 +4881,8 @@ function showNextRaceDecision() {
       </div>
     </div>
 
-    <div class="decision-box">
+    <div class="decision-box${decision.isLegendaryEvent ? ' legendary-event' : ''}">
+      ${decision.isLegendaryEvent ? `<div style="font-size:0.75rem;color:var(--gold);font-weight:600;margin-bottom:6px;">⭐ 传奇车手事件 · ${decision.legendaryName}</div>` : ''}
       <div class="decision-title">${decision.title}</div>
       <div class="decision-desc">${decision.desc}</div>
       <div class="decision-options">
@@ -4610,6 +4907,12 @@ function makeRaceDecision(decisionIdx, optionLabel) {
       effect: option.effect,
     });
     applyDecisionEffects(option.effect);
+
+    // Handle legendary event special effects
+    if (decision.isLegendaryEvent && option.special) {
+      applyLegendarySpecial(option.special);
+      showToast(`⭐ ${decision.legendaryName} 事件已触发！`, 'success', 4000);
+    }
   }
 
   raceState.currentDecisionIdx++;
