@@ -2159,6 +2159,9 @@ function startNewSeason() {
   if (!gameState.careerRaceResults) gameState.careerRaceResults = [];
   gameState.careerRaceResults = gameState.careerRaceResults.concat(gameState.raceResults);
 
+  // Calculate bonuses BEFORE resetting raceResults
+  const lastSeasonResults = [...gameState.raceResults];
+
   gameState.season++;
   gameState.currentRace = 0;
   gameState.seasonNumber++;
@@ -2184,23 +2187,24 @@ function startNewSeason() {
   const sponsorIncome = gameState.sponsor ? (gameState.sponsor.salary || 0) : 0;
   const baseSalary = gameState.salary || team.salary[0] || 5;
 
-  // Calculate race bonuses from last season
+  // Calculate race bonuses from last season (use saved copy before reset)
   let raceBonus = 0;
-  const wins = gameState.raceResults.filter(r => !r.dnf && r.position === 1).length;
-  const podiums = gameState.raceResults.filter(r => !r.dnf && r.position <= 3).length;
-  const p2Count = gameState.raceResults.filter(r => !r.dnf && r.position === 2).length;
-  const p3Count = gameState.raceResults.filter(r => !r.dnf && r.position === 3).length;
+  const wins = lastSeasonResults.filter(r => !r.dnf && r.position === 1).length;
+  const podiums = lastSeasonResults.filter(r => !r.dnf && r.position <= 3).length;
+  const p2Count = lastSeasonResults.filter(r => !r.dnf && r.position === 2).length;
+  const p3Count = lastSeasonResults.filter(r => !r.dnf && r.position === 3).length;
   // Podium bonuses: P1=2.0M each, P2=1.0M each, P3=0.5M each
   raceBonus += wins * 2.0 + p2Count * 1.0 + p3Count * 0.5;
-  // Championship bonus
-  if (isChampion) raceBonus += 10;
-  // Team standing bonus (top 3 teams)
-  const teamStanding = getTeamStandings().find(ts => ts.teamId === gameState.teamId);
-  if (teamStanding) {
-    if (teamStanding.position === 1) raceBonus += 5;
-    else if (teamStanding.position === 2) raceBonus += 3;
-    else if (teamStanding.position === 3) raceBonus += 2;
-  }
+  // Championship bonus - check if player was champion last season
+  const wasChampion = gameState.lastSeasonChampion === true;
+  if (wasChampion) raceBonus += 10;
+  // Team standing bonus (top 3 teams) - get standings before reset
+  const teamStandingsBeforeReset = [...gameState.teamStandings].sort((a, b) => b.points - a.points);
+  const teamStanding = teamStandingsBeforeReset.find(ts => ts.teamId === gameState.teamId);
+  const teamStandingPos = teamStanding ? teamStandingsBeforeReset.indexOf(teamStanding) + 1 : null;
+  if (teamStandingPos === 1) raceBonus += 5;
+  else if (teamStandingPos === 2) raceBonus += 3;
+  else if (teamStandingPos === 3) raceBonus += 2;
 
   const seasonIncome = baseSalary + sponsorIncome + raceBonus;
   gameState.money += seasonIncome;
@@ -2214,9 +2218,12 @@ function startNewSeason() {
     total: seasonIncome,
     wins: wins,
     podiums: podiums,
-    isChampion: isChampion,
-    teamStandingPos: teamStanding ? teamStanding.position : null,
+    isChampion: wasChampion,
+    teamStandingPos: teamStandingPos,
   };
+
+  // Clear lastSeasonChampion flag after processing
+  gameState.lastSeasonChampion = false;
 
   // Decrement sponsor contract years
   if (gameState.sponsorYearsLeft > 0) {
@@ -2348,6 +2355,7 @@ function loadGame() {
       if (gameState.money === undefined) gameState.money = 15;
       if (gameState.sponsorYearsLeft === undefined) gameState.sponsorYearsLeft = 0;
       if (gameState.legendaryEventUsed === undefined) gameState.legendaryEventUsed = false;
+      if (gameState.lastSeasonChampion === undefined) gameState.lastSeasonChampion = false;
       return true;
     }
     return false;
@@ -3338,7 +3346,12 @@ function finishQuickSim(simResults) {
   const finalPoints = playerStanding ? playerStanding.points : 0;
 
   const isChampion = finalPos === 1;
-  if (isChampion) gameState.championships++;
+  if (isChampion) {
+    gameState.championships++;
+    gameState.lastSeasonChampion = true;
+  } else {
+    gameState.lastSeasonChampion = false;
+  }
 
   const quickTeamStandings = getTeamStandings();
   const quickPlayerTeamStanding = quickTeamStandings.find(ts => ts.teamId === gameState.teamId);
@@ -5094,6 +5107,9 @@ function endSeason() {
   const isChampion = checkChampion();
   if (isChampion) {
     gameState.championships++;
+    gameState.lastSeasonChampion = true;
+  } else {
+    gameState.lastSeasonChampion = false;
   }
 
   const standings = getDriverStandings();
