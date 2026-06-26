@@ -1526,12 +1526,282 @@ function renderHub() {
       <button class="btn btn-primary btn-lg" onclick="startRaceWeekend()" style="margin-top:8px;">
         🏁 进入比赛周末
       </button>
+      <button class="btn" onclick="confirmQuickSim()" style="margin-top:8px;width:100%;background:transparent;border:1px solid var(--border);color:var(--text-secondary);">
+        ⚡ 一键模拟剩余赛季（${TRACKS.length - gameState.currentRace}站）
+      </button>
     ` : `
       <button class="btn btn-primary btn-lg" onclick="endSeason()" style="margin-top:8px;">
         🏆 赛季结束
       </button>
     `}
   `;
+}
+
+function confirmQuickSim() {
+  const remaining = TRACKS.length - gameState.currentRace;
+  showScreen('hub-screen');
+  document.getElementById('hub-screen').innerHTML = `
+    <div class="section-header">
+      <h2 class="font-display">⚡ 快速模拟赛季</h2>
+    </div>
+    <div class="card" style="text-align:center;padding:30px;">
+      <div style="font-size:3rem;margin-bottom:16px;">⚡</div>
+      <h3>即将模拟剩余 ${remaining} 站比赛</h3>
+      <p class="text-muted" style="margin-top:8px;line-height:1.6;">
+        系统将自动模拟所有剩余比赛，包括排位赛和正赛。<br>
+        每站比赛会自动选择最优策略，但不会触发随机事件决策。<br>
+        <span style="color:var(--yellow);">⚠️ 快速模拟的比赛不会获得训练加成</span>
+      </p>
+      <div style="margin-top:16px;display:flex;gap:10px;justify-content:center;">
+        <button class="btn btn-primary" onclick="quickSimSeason()">确认模拟</button>
+        <button class="btn" onclick="renderHub()" style="background:transparent;border:1px solid var(--border);">取消</button>
+      </div>
+    </div>
+  `;
+}
+
+function quickSimSeason() {
+  showScreen('hub-screen');
+  const container = document.getElementById('hub-screen');
+  const totalRemaining = TRACKS.length - gameState.currentRace;
+
+  container.innerHTML = `
+    <div class="section-header">
+      <h2 class="font-display">⚡ 赛季模拟中...</h2>
+    </div>
+    <div class="card" style="padding:24px;">
+      <div id="sim-progress-bar" style="height:8px;background:var(--bg);border-radius:4px;overflow:hidden;margin-bottom:16px;">
+        <div id="sim-progress-fill" style="height:100%;width:0%;background:linear-gradient(90deg,var(--f1-red),var(--gold));transition:width 0.3s;"></div>
+      </div>
+      <div id="sim-status" style="text-align:center;font-size:0.9rem;color:var(--text-secondary);">准备开始...</div>
+      <div id="sim-results" style="margin-top:16px;"></div>
+    </div>
+  `;
+
+  let simStep = 0;
+  const simResults = [];
+
+  function simNextRace() {
+    if (gameState.currentRace >= TRACKS.length) {
+      // Season complete, show summary
+      finishQuickSim(simResults);
+      return;
+    }
+
+    const raceIdx = gameState.currentRace;
+    const track = TRACKS[raceIdx];
+    const weather = getWeather();
+    gameState.currentWeather = weather;
+
+    // Update progress
+    const progress = Math.round((simStep / totalRemaining) * 100);
+    document.getElementById('sim-progress-fill').style.width = progress + '%';
+    document.getElementById('sim-status').textContent = `正在模拟第 ${raceIdx + 1}/${TRACKS.length} 站: ${track.name}`;
+
+    // Auto-train: pick the stat with lowest value
+    if (!gameState.trainedThisWeek) {
+      const statKeys = Object.keys(gameState.stats);
+      let lowestStat = statKeys[0];
+      statKeys.forEach(k => {
+        if (gameState.stats[k] < gameState.stats[lowestStat]) lowestStat = k;
+      });
+      train(lowestStat);
+    }
+
+    // Simulate qualifying
+    const qualiResult = simulateQualifying(raceIdx);
+
+    // Track pole
+    if (qualiResult.playerPos === 1) {
+      gameState.careerPoles = (gameState.careerPoles || 0) + 1;
+    }
+
+    // Auto-generate modifiers (pick best option for each decision)
+    const decisions = getRaceDecisions(raceIdx, gameState);
+    const allModifiers = [];
+    decisions.forEach(decision => {
+      // Pick the option with highest total positive effect
+      let bestOption = decision.options[0];
+      let bestScore = -999;
+      decision.options.forEach(opt => {
+        let score = 0;
+        const eff = opt.effect;
+        if (eff.pace) score += eff.pace;
+        if (eff.consistency) score += eff.consistency;
+        if (eff.raceIQ) score += eff.raceIQ;
+        if (eff.attack) score += eff.attack;
+        if (eff.defend) score += eff.defend;
+        if (eff.wet) score += eff.wet;
+        if (eff.risk) score -= eff.risk;
+        if (eff.tireWear) score -= eff.tireWear;
+        // Reputation changes
+        if (eff.teamTrust) score += eff.teamTrust * 0.3;
+        if (eff.mediaRep) score += eff.mediaRep * 0.3;
+        if (eff.fanPop) score += eff.fanPop * 0.3;
+        if (eff.driverRep) score += eff.driverRep * 0.3;
+        if (eff.sponsorRep) score += eff.sponsorRep * 0.3;
+        if (score > bestScore) {
+          bestScore = score;
+          bestOption = opt;
+        }
+      });
+      allModifiers.push({ segment: decision.segment, effect: bestOption.effect });
+
+      // Apply decision effects
+      applyDecisionEffects(bestOption.effect);
+    });
+
+    // Simulate race
+    const raceResults = simulateRace(raceIdx, allModifiers);
+    applyRaceResults(raceResults);
+
+    // Record result
+    const playerResult = raceResults.find(r => r.driver.isPlayer);
+    const playerPts = (!playerResult.dnf && playerResult.position <= 10) ? POINTS_SYSTEM[playerResult.position - 1] : 0;
+
+    simResults.push({
+      raceIdx,
+      trackName: track.name,
+      qualiPos: qualiResult.playerPos,
+      racePos: playerResult.dnf ? 'DNF' : 'P' + playerResult.position,
+      points: playerPts,
+      dnf: playerResult.dnf,
+    });
+
+    // Update display
+    const resultsHtml = simResults.slice(-5).reverse().map(r => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--border);font-size:0.85rem;">
+        <span style="color:var(--text-secondary);">${r.trackName}</span>
+        <span>
+          <span style="color:var(--text-muted);font-size:0.75rem;">Q${r.qualiPos}</span>
+          →
+          <span style="color:${r.dnf ? 'var(--f1-red)' : r.racePos === 'P1' ? 'var(--gold)' : r.racePos.startsWith('P') && parseInt(r.racePos.substring(1)) <= 3 ? 'var(--gold)' : 'var(--text-primary)'};font-weight:700;">
+            ${r.racePos}
+          </span>
+          ${r.points > 0 ? `<span style="color:var(--green);font-size:0.75rem;">+${r.points}</span>` : ''}
+        </span>
+      </div>
+    `).join('');
+
+    document.getElementById('sim-results').innerHTML = resultsHtml;
+
+    // Advance race
+    gameState.currentRace++;
+    gameState.trainedThisWeek = false;
+    simStep++;
+
+    // Save periodically
+    if (simStep % 5 === 0) saveGame();
+
+    // Continue to next race with a small delay for UI update
+    setTimeout(simNextRace, 150);
+  }
+
+  simNextRace();
+}
+
+function finishQuickSim(simResults) {
+  saveGame();
+
+  // Count stats
+  const wins = simResults.filter(r => r.racePos === 'P1').length;
+  const podiums = simResults.filter(r => !r.dnf && parseInt(r.racePos.substring(1)) <= 3).length;
+  const dnfs = simResults.filter(r => r.dnf).length;
+  const totalPoints = simResults.reduce((sum, r) => sum + r.points, 0);
+  const bestFinish = simResults.reduce((best, r) => {
+    if (r.dnf) return best;
+    const pos = parseInt(r.racePos.substring(1));
+    return pos < best ? pos : best;
+  }, 99);
+
+  const standings = getDriverStandings();
+  const playerStanding = standings.find(d => d.isPlayer);
+  const finalPos = playerStanding ? playerStanding.position : '-';
+  const finalPoints = playerStanding ? playerStanding.points : 0;
+
+  const isChampion = finalPos === 1;
+  if (isChampion) gameState.championships++;
+
+  document.getElementById('hub-screen').innerHTML = `
+    <div class="section-header">
+      <h2 class="font-display">⚡ 赛季模拟完成</h2>
+    </div>
+
+    ${isChampion ? `
+      <div class="card" style="text-align:center;padding:30px;border-color:var(--gold);box-shadow:0 0 30px rgba(255,215,0,0.15);">
+        <div style="font-size:4rem;margin-bottom:12px;">🏆</div>
+        <h2 class="font-display" style="color:var(--gold);">世界冠军！</h2>
+        <p class="text-muted" style="margin-top:8px;">恭喜赢得 ${gameState.season} 赛季冠军！</p>
+      </div>
+    ` : ''}
+
+    <div class="card" style="padding:20px;">
+      <h3 style="margin-bottom:16px;font-size:0.9rem;color:var(--text-secondary);">模拟结果总览</h3>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;text-align:center;">
+        <div>
+          <div style="font-family:'Orbitron';font-size:2rem;font-weight:800;color:var(--f1-red);">P${finalPos}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">最终排名</div>
+        </div>
+        <div>
+          <div style="font-family:'Orbitron';font-size:2rem;font-weight:800;">${finalPoints}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">总积分</div>
+        </div>
+        <div>
+          <div style="font-family:'Orbitron';font-size:2rem;font-weight:800;color:var(--gold);">${wins}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">分站冠军</div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;text-align:center;">
+        <div>
+          <div style="font-family:'Orbitron';font-size:1.5rem;font-weight:700;">${podiums}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">领奖台</div>
+        </div>
+        <div>
+          <div style="font-family:'Orbitron';font-size:1.5rem;font-weight:700;color:var(--f1-red);">${dnfs}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">退赛</div>
+        </div>
+        <div>
+          <div style="font-family:'Orbitron';font-size:1.5rem;font-weight:700;color:var(--green);">${bestFinish <= 99 ? 'P' + bestFinish : '-'}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">最佳完赛</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:16px;margin-top:12px;">
+      <h3 style="margin-bottom:12px;font-size:0.9rem;color:var(--text-secondary);">每站成绩</h3>
+      ${simResults.map(r => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:0.85rem;">
+          <span style="color:var(--text-secondary);">${r.trackName}</span>
+          <span>
+            <span style="color:var(--text-muted);font-size:0.75rem;">Q${r.qualiPos}</span>
+            →
+            <span style="color:${r.dnf ? 'var(--f1-red)' : r.racePos === 'P1' ? 'var(--gold)' : r.racePos.startsWith('P') && parseInt(r.racePos.substring(1)) <= 3 ? 'var(--gold)' : 'var(--text-primary)'};font-weight:700;">
+              ${r.racePos}
+            </span>
+            ${r.points > 0 ? `<span style="color:var(--green);font-size:0.75rem;">+${r.points}</span>` : ''}
+          </span>
+        </div>
+      `).join('')}
+    </div>
+
+    ${gameState.newAchievements && gameState.newAchievements.length > 0 ? `
+      <div class="card" style="padding:16px;margin-top:12px;border-color:var(--gold);">
+        <h3 style="margin-bottom:8px;font-size:0.9rem;color:var(--gold);">🏅 新成就解锁</h3>
+        ${gameState.newAchievements.map(a => `
+          <div style="padding:6px 0;font-size:0.85rem;">
+            <strong>${a.name}</strong> - <span style="color:var(--text-secondary);">${a.desc}</span>
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
+
+    <button class="btn btn-primary btn-lg" onclick="showContractOffers()" style="margin-top:16px;">
+      进入合同谈判 →
+    </button>
+  `;
+
+  saveGame();
 }
 
 function renderTraining() {
