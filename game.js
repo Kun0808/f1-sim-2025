@@ -624,10 +624,13 @@ const SPONSORS = [
 
 let gameState = null;
 
-function createNewGame(name, backgroundId, selectedTeamIdx) {
+function createNewGame(name, backgroundId, selectedTeamIdx, replaceSlot) {
   const bg = BACKGROUNDS.find(b => b.id === backgroundId);
   const teamIdx = selectedTeamIdx !== undefined ? selectedTeamIdx : bg.teamRange[0] + Math.floor(Math.random() * (bg.teamRange[1] - bg.teamRange[0] + 1));
   const team = TEAMS[teamIdx];
+
+  // If replaceSlot not specified, default to slot 0
+  if (replaceSlot === undefined) replaceSlot = 0;
 
   // Base stats
   const baseStats = { pace: 80, consistency: 80, wet: 77, defend: 78, attack: 79, raceIQ: 78 };
@@ -640,11 +643,10 @@ function createNewGame(name, backgroundId, selectedTeamIdx) {
 
   // Create AI drivers with team assignments
   const drivers = [];
-  let aiIdx = 0;
   for (let t = 0; t < TEAMS.length; t++) {
     for (let d = 0; d < 2; d++) {
-      if (t === teamIdx && d === 0) {
-        // Player's slot
+      if (t === teamIdx && d === replaceSlot) {
+        // Player's slot - replaces the selected driver
         drivers.push({
           name: name,
           teamId: team.id,
@@ -656,8 +658,8 @@ function createNewGame(name, backgroundId, selectedTeamIdx) {
           dnf: 0,
         });
       } else {
-        const ai = AI_DRIVERS[aiIdx % AI_DRIVERS.length];
-        aiIdx++;
+        const aiIdx = t * 2 + d;
+        const ai = AI_DRIVERS[aiIdx];
         drivers.push({
           name: ai.name,
           teamId: TEAMS[t].id,
@@ -1385,6 +1387,34 @@ function renderNameInput() {
   const container = document.getElementById('background-screen');
   container.innerHTML = `
     <div class="section-header">
+      <h2 class="font-display">🏎️ 开始你的职业生涯</h2>
+    </div>
+    <div class="card" style="padding:30px;text-align:center;margin-bottom:16px;cursor:pointer;border:2px solid var(--border);transition:all 0.2s;"
+      onmouseover="this.style.borderColor='var(--f1-red)'"
+      onmouseout="this.style.borderColor='var(--border)'"
+      onclick="renderNewDriverNameInput()">
+      <div style="font-size:3rem;margin-bottom:12px;">🏁</div>
+      <h3 style="margin-bottom:8px;">新建车手</h3>
+      <p class="text-muted">创建属于你自己的F1车手，选择背景故事和车队</p>
+      <div style="margin-top:8px;font-size:0.8rem;color:var(--green);">→ 自定义姓名、背景、车队</div>
+    </div>
+    <div class="card" style="padding:30px;text-align:center;cursor:pointer;border:2px solid var(--border);transition:all 0.2s;"
+      onmouseover="this.style.borderColor='var(--gold)'"
+      onmouseout="this.style.borderColor='var(--border)'"
+      onclick="renderExistingDriverSelect()">
+      <div style="font-size:3rem;margin-bottom:12px;">👤</div>
+      <h3 style="margin-bottom:8px;">扮演现役车手</h3>
+      <p class="text-muted">选择一位真实F1车手，以他们的能力开启赛季</p>
+      <div style="margin-top:8px;font-size:0.8rem;color:var(--gold);">→ 20位现役车手任选</div>
+    </div>
+  `;
+}
+
+function renderNewDriverNameInput() {
+  showScreen('background-screen');
+  const container = document.getElementById('background-screen');
+  container.innerHTML = `
+    <div class="section-header">
       <h2 class="font-display">🏎️ 创建你的车手</h2>
     </div>
     <div class="card" style="padding:30px;text-align:center;">
@@ -1400,6 +1430,7 @@ function renderNameInput() {
         下一步：选择背景 →
       </button>
     </div>
+    <button class="btn" style="margin-top:12px;background:transparent;color:var(--text-secondary);" onclick="renderNameInput()">← 返回</button>
   `;
 
   const input = document.getElementById('driver-name-input');
@@ -1408,6 +1439,176 @@ function renderNameInput() {
     btn.disabled = input.value.trim().length === 0;
   });
   input.focus();
+}
+
+function renderExistingDriverSelect() {
+  showScreen('background-screen');
+  const container = document.getElementById('background-screen');
+
+  let selectedDriverIdx = null;
+
+  container.innerHTML = `
+    <div class="section-header">
+      <h2 class="font-display">👤 选择现役车手</h2>
+    </div>
+    <p class="text-muted" style="margin-bottom:16px;">选择一位真实F1车手，以他们的能力属性开始职业生涯</p>
+    <div style="display:grid;gap:10px;">
+      ${TEAMS.map((team, teamIdx) => {
+        const d1 = AI_DRIVERS[teamIdx * 2];
+        const d2 = AI_DRIVERS[teamIdx * 2 + 1];
+        return `
+          <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+            <div style="background:var(--bg);padding:8px 12px;display:flex;align-items:center;gap:8px;">
+              <span class="team-badge ${team.css}" style="font-size:0.8rem;">${team.short}</span>
+              <span style="font-size:0.8rem;color:var(--text-muted);">赛车性能 ${team.car}</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);">
+              ${[d1, d2].map((d, di) => {
+                const idx = teamIdx * 2 + di;
+                const overall = Math.round((d.pace + d.consistency + d.wet + d.defend + d.attack + d.raceIQ) / 6);
+                return `
+                  <div class="existing-driver-card" data-idx="${idx}" style="background:var(--bg-card);padding:12px;cursor:pointer;transition:all 0.2s;"
+                    onclick="selectExistingDriver(${idx})">
+                    <div style="font-weight:700;font-size:0.95rem;">${d.name}</div>
+                    <div style="font-size:0.75rem;color:var(--text-muted);margin:4px 0;">综合: <span style="color:var(--gold);font-weight:700;">${overall}</span></div>
+                    <div style="display:flex;gap:6px;font-size:0.7rem;flex-wrap:wrap;">
+                      <span style="color:var(--f1-red);">⚡${d.pace}</span>
+                      <span style="color:var(--green);">🎯${d.consistency}</span>
+                      <span style="color:var(--blue);">🌧️${d.wet}</span>
+                      <span style="color:var(--orange);">🧠${d.raceIQ}</span>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+    <button class="btn btn-primary btn-lg" id="confirm-existing-btn" disabled onclick="confirmExistingDriver()" style="margin-top:16px;">
+      确认并开始职业生涯 →
+    </button>
+    <button class="btn" style="margin-top:8px;background:transparent;color:var(--text-secondary);" onclick="renderNameInput()">← 返回</button>
+  `;
+}
+
+function selectExistingDriver(idx) {
+  document.querySelectorAll('.existing-driver-card').forEach(c => {
+    c.style.borderColor = 'transparent';
+    c.style.background = 'var(--bg-card)';
+  });
+  const card = document.querySelector(`.existing-driver-card[data-idx="${idx}"]`);
+  if (card) {
+    card.style.borderColor = 'var(--gold)';
+    card.style.background = 'var(--bg-card-hover)';
+  }
+  selectedExistingDriverIdx = idx;
+  document.getElementById('confirm-existing-btn').disabled = false;
+}
+
+let selectedExistingDriverIdx = null;
+
+function confirmExistingDriver() {
+  if (selectedExistingDriverIdx === null) return;
+  createGameAsExistingDriver(selectedExistingDriverIdx);
+}
+
+function createGameAsExistingDriver(driverIdx) {
+  const teamIdx = Math.floor(driverIdx / 2);
+  const driverSlot = driverIdx % 2; // 0 or 1 - which driver in the team
+  const team = TEAMS[teamIdx];
+  const aiDriver = AI_DRIVERS[driverIdx];
+
+  // Player gets the real driver's stats
+  const stats = {
+    pace: aiDriver.pace,
+    consistency: aiDriver.consistency,
+    wet: aiDriver.wet,
+    defend: aiDriver.defend,
+    attack: aiDriver.attack,
+    raceIQ: aiDriver.raceIQ,
+  };
+
+  // Create all 20 drivers, player replaces the selected one
+  const drivers = [];
+  for (let t = 0; t < TEAMS.length; t++) {
+    for (let d = 0; d < 2; d++) {
+      const aiIdx = t * 2 + d;
+      if (t === teamIdx && d === driverSlot) {
+        // Player's slot - use real driver's name and stats
+        drivers.push({
+          name: aiDriver.name,
+          teamId: team.id,
+          teamIdx: teamIdx,
+          isPlayer: true,
+          stats: { ...stats, skill: aiDriver.skill },
+          points: 0,
+          positions: [],
+          dnf: 0,
+        });
+      } else {
+        const ai = AI_DRIVERS[aiIdx];
+        drivers.push({
+          name: ai.name,
+          teamId: TEAMS[t].id,
+          teamIdx: t,
+          isPlayer: false,
+          stats: {
+            pace: ai.pace,
+            consistency: ai.consistency,
+            wet: ai.wet,
+            defend: ai.defend,
+            attack: ai.attack,
+            raceIQ: ai.raceIQ,
+            skill: ai.skill,
+          },
+          points: 0,
+          positions: [],
+          dnf: 0,
+        });
+      }
+    }
+  }
+
+  gameState = {
+    playerName: aiDriver.name,
+    background: 'existing',
+    teamId: team.id,
+    teamIdx: teamIdx,
+    season: 2025,
+    currentRace: 0,
+    stats: { ...stats },
+    reputation: {
+      teamTrust: 65,
+      fanPopularity: 60,
+      mediaRelation: 55,
+      driverRespect: 55,
+    },
+    salary: team.salary[0],
+    contractYears: 1,
+    drivers: drivers,
+    teamStandings: TEAMS.map(t => ({ teamId: t.id, points: 0 })),
+    raceResults: [],
+    seasonNumber: 1,
+    careerWins: 0,
+    careerPodiums: 0,
+    careerPoints: 0,
+    careerPoles: 0,
+    championships: 0,
+    trainedThisWeek: false,
+    seasonPoints: 0,
+    seasonsAtCurrentTeam: 1,
+    achievements: [],
+    sponsor: null,
+    sponsorYearsLeft: 0,
+    totalEarnings: 0,
+    money: 50,
+  };
+
+  showScreen('hub-screen');
+  renderHub();
+  saveGame();
+  showToast(`欢迎，${aiDriver.name}！开始你的${team.short}生涯`, 'success');
 }
 
 function renderBackgroundSelect(driverName) {
@@ -1473,6 +1674,8 @@ function renderTeamSelect(name, bgId) {
       ${TEAMS.map((team, idx) => {
         const difficulty = idx <= 1 ? '简单' : idx <= 3 ? '普通' : idx <= 6 ? '困难' : '专家';
         const difficultyColor = idx <= 1 ? 'var(--green)' : idx <= 3 ? 'var(--blue)' : idx <= 6 ? 'var(--orange)' : 'var(--f1-red)';
+        const d1 = AI_DRIVERS[idx * 2];
+        const d2 = AI_DRIVERS[idx * 2 + 1];
         return `
           <div class="team-select-card" data-team="${idx}">
             <div class="team-select-header">
@@ -1488,6 +1691,9 @@ function renderTeamSelect(name, bgId) {
               <span style="font-family:'Orbitron';font-weight:700;color:${difficultyColor};">${team.car}</span>
             </div>
             <div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px;">💰 $${team.salary[0]}-${team.salary[1]}M/年</div>
+            <div style="font-size:0.7rem;color:var(--text-secondary);margin-top:4px;border-top:1px solid var(--border);padding-top:4px;">
+              🏎️ ${d1.name} · ${d2.name}
+            </div>
           </div>
         `;
       }).join('')}
@@ -1502,9 +1708,9 @@ function renderTeamSelect(name, bgId) {
     </div>
 
     <button class="btn btn-primary btn-lg" id="confirm-team-btn" disabled onclick="confirmTeamSelect('${name}', '${bgId}')">
-      确认并开始职业生涯 →
+      下一步：选择替代车手 →
     </button>
-    <button class="btn" style="margin-top:8px;background:transparent;color:var(--text-secondary);" onclick="renderBackgroundSelect()">
+    <button class="btn" style="margin-top:8px;background:transparent;color:var(--text-secondary);" onclick="renderBackgroundSelect('${name}')">
       ← 返回背景选择
     </button>
   `;
@@ -1522,11 +1728,93 @@ function confirmTeamSelect(name, bgId) {
   const selectedCard = document.querySelector('.team-select-card.selected');
   if (!selectedCard) return;
   const teamIdx = parseInt(selectedCard.dataset.team);
-  createNewGame(name, bgId, teamIdx);
+  renderReplaceDriverSelect(name, bgId, teamIdx);
+}
+
+function renderReplaceDriverSelect(name, bgId, teamIdx) {
+  showScreen('background-screen');
+  const team = TEAMS[teamIdx];
+  const bg = BACKGROUNDS.find(b => b.id === bgId);
+  const d1 = AI_DRIVERS[teamIdx * 2];
+  const d2 = AI_DRIVERS[teamIdx * 2 + 1];
+
+  const container = document.getElementById('background-screen');
+  let selectedSlot = null;
+
+  container.innerHTML = `
+    <div class="section-header">
+      <h2 class="font-display">🔄 选择替代车手</h2>
+    </div>
+    <p class="text-muted" style="margin-bottom:8px;">你将加入 <span class="team-badge ${team.css}">${team.short}</span> ，取代以下一位车手</p>
+    <p class="text-muted" style="margin-bottom:20px;font-size:0.8rem;">被替代的车手将离开F1围场，你将占据他们的席位</p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      ${[d1, d2].map((d, di) => {
+        const overall = Math.round((d.pace + d.consistency + d.wet + d.defend + d.attack + d.raceIQ) / 6);
+        return `
+          <div class="replace-driver-card" data-slot="${di}" style="background:var(--bg-card);border:2px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;transition:all 0.2s;text-align:center;">
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:4px;">${di === 0 ? '一号车手' : '二号车手'}</div>
+            <div style="font-size:1.1rem;font-weight:700;margin-bottom:8px;">${d.name}</div>
+            <div style="font-size:0.8rem;color:var(--gold);font-weight:700;margin-bottom:8px;">综合 ${overall}</div>
+            <div style="display:flex;gap:8px;font-size:0.7rem;justify-content:center;flex-wrap:wrap;">
+              <span style="color:var(--f1-red);">⚡${d.pace}</span>
+              <span style="color:var(--green);">🎯${d.consistency}</span>
+              <span style="color:var(--blue);">🌧️${d.wet}</span>
+              <span style="color:var(--orange);">⚔️${d.attack}</span>
+              <span style="color:var(--purple);">🛡️${d.defend}</span>
+              <span style="color:var(--gold);">🧠${d.raceIQ}</span>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+
+    <div class="card" style="margin-top:16px;padding:14px;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:1.2rem;">${bg.icon}</span>
+      <div style="flex:1;">
+        <div style="font-size:0.85rem;font-weight:600;">${bg.name} · ${name} → ${team.short}</div>
+        <div style="font-size:0.75rem;color:var(--text-secondary);">${bg.tags.map(t => t).join(' · ')}</div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-lg" id="confirm-replace-btn" disabled onclick="confirmReplaceDriver('${name}', '${bgId}', ${teamIdx})">
+      确认并开始职业生涯 →
+    </button>
+    <button class="btn" style="margin-top:8px;background:transparent;color:var(--text-secondary);" onclick="renderTeamSelect('${name}', '${bgId}')">
+      ← 返回车队选择
+    </button>
+  `;
+
+  container.querySelectorAll('.replace-driver-card').forEach(card => {
+    card.addEventListener('click', () => {
+      container.querySelectorAll('.replace-driver-card').forEach(c => {
+        c.style.borderColor = 'var(--border)';
+        c.style.background = 'var(--bg-card)';
+      });
+      card.style.borderColor = 'var(--f1-red)';
+      card.style.background = 'var(--bg-card-hover)';
+      selectedSlot = parseInt(card.dataset.slot);
+      document.getElementById('confirm-replace-btn').disabled = false;
+    });
+  });
+
+  // Store selected slot in a global for confirmReplaceDriver
+  window._selectedReplaceSlot = null;
+  container.querySelectorAll('.replace-driver-card').forEach(card => {
+    card.addEventListener('click', () => {
+      window._selectedReplaceSlot = parseInt(card.dataset.slot);
+    });
+  });
+}
+
+function confirmReplaceDriver(name, bgId, teamIdx) {
+  const replaceSlot = window._selectedReplaceSlot;
+  if (replaceSlot === null && replaceSlot !== 0) return;
+  createNewGame(name, bgId, teamIdx, replaceSlot);
   showScreen('hub-screen');
   renderHub();
   saveGame();
-  showToast('欢迎来到F1！', 'success');
+  showToast(`欢迎来到F1！你取代了 ${AI_DRIVERS[teamIdx * 2 + replaceSlot].name} 的席位`, 'success');
 }
 
 function renderHub() {
