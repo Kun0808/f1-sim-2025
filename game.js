@@ -1847,11 +1847,11 @@ function applyRaceResults(raceResults) {
           gameState.comebackFromPos = raceState.qualifyingResult.playerPos;
         }
         // Sprint win tracking
-        if (raceState.sprintResult && raceState.sprintResult.position === 1) {
+        if (raceState && raceState.sprintResult && raceState.sprintResult.position === 1) {
           gameState.sprintWins = (gameState.sprintWins || 0) + 1;
         }
         // Perfect weekend (pole + win)
-        if (raceState.qualifyingResult && raceState.qualifyingResult.playerPos === 1) {
+        if (raceState && raceState.qualifyingResult && raceState.qualifyingResult.playerPos === 1) {
           gameState.perfectWeekends = (gameState.perfectWeekends || 0) + 1;
         }
       }
@@ -3188,6 +3188,7 @@ function quickSimSeason() {
       return;
     }
 
+    try {
     const raceIdx = gameState.currentRace;
     const track = TRACKS[raceIdx];
     const weather = getWeather();
@@ -3293,6 +3294,22 @@ function quickSimSeason() {
 
     // Save periodically
     if (simStep % 5 === 0) saveGame();
+
+    } catch (err) {
+      console.error('Quick sim error at race ' + gameState.currentRace + ':', err);
+      // Still advance to prevent freeze
+      gameState.currentRace++;
+      gameState.trainedThisWeek = false;
+      simStep++;
+      simResults.push({
+        raceIdx: gameState.currentRace,
+        trackName: TRACKS[gameState.currentRace - 1] ? TRACKS[gameState.currentRace - 1].name : 'Unknown',
+        qualiPos: '-',
+        racePos: 'DNF',
+        points: 0,
+        dnf: true,
+      });
+    }
 
     // Continue to next race with a small delay for UI update
     setTimeout(simNextRace, 150);
