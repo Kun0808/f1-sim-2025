@@ -232,13 +232,13 @@ const NEWS_TEMPLATES = [
   { title: '围场趣闻', body: () => 'Alonso在采访中暗示自己"可能再赛十年"，围场集体沉默三秒后爆笑。' },
   { title: '围场趣闻', body: () => 'Norris和Piastri被拍到一起打迷你高尔夫，两人赌注是一顿晚餐。' },
   { title: '围场趣闻', body: () => 'Leclerc的钢琴演奏视频在社交媒体上走红，车迷纷纷要求出专辑。' },
-  { title: '围场趣闻', body: () => 'Stroll的帽子系列又出了新色款，据说这次的颜色叫"父亲的钱包色"。' },
-  { title: '围场趣闻', body: () => 'Tsunoda在无线电里又爆粗口了，这次FIA决定不予处罚因为"听不懂日语脏话"。' },
-  { title: '围场趣闻', body: () => 'Hulkenberg又被问到何时能上领奖台，他无奈回答："每年都问，每年都没有。"' },
-  { title: '围场趣闻', body: () => 'Russell在Mercedes车房里被发现偷偷量了Hamilton的座椅尺寸。' },
+  { title: '围场趣闻', body: () => 'Stroll的帽子系列又出了新色款，这次与加拿大本土设计师合作，限量版发售。' },
+  { title: '围场趣闻', body: () => 'Tsunoda在无线电里又冒出经典台词了，这次FIA翻译官表示"需要时间理解其中的热情"。' },
+  { title: '围场趣闻', body: () => 'Hulkenberg被问到职业生涯最自豪的时刻，他毫不犹豫地回答："勒芒24小时整体验。"' },
+  { title: '围场趣闻', body: () => 'Russell在Mercedes车房里被发现正在认真研究空气动力学数据，队友表示"他从早到晚都在看数据"。' },
   { title: '围场趣闻', body: () => 'Sainz的"Smooth Operator"铃声在围场里传染了，已有5位车手手机设置为同一铃声。' },
   { title: '围场趣闻', body: () => 'Bearman又一次被叫去当替补，围场戏称他为"F1最强消防员"。' },
-  { title: '围场趣闻', body: () => 'Gasly和Ocon据说在食堂互相无视，两人的桌子之间隔了整整三排。' },
+  { title: '围场趣闻', body: () => 'Gasly和Ocon在食堂被发现坐在一起讨论法国美食，看起来关系比外界想象的要好。' },
   { title: '围场趣闻', body: () => '一位车手的宠物狗在围场走丢，结果在另一个车队的车房里找到了——它正吃着顶级狗粮。' },
   { title: '围场趣闻', body: () => 'Antonelli被问到如何看待"新秀"标签时回答："什么新秀？我已经模拟器跑了5000小时了。"' },
   { title: '围场趣闻', body: () => '围场餐厅主厨透露，某位世界冠军每场比赛前必吃的"幸运餐"是一碗意大利面配两个荷包蛋。' },
@@ -251,7 +251,7 @@ const NEWS_TEMPLATES = [
   { title: '围场趣闻', body: () => '一位车队领队透露，他选择车手的首要标准不是速度，而是"能不能在赞助商面前吃相好看"。' },
   { title: '围场趣闻', body: () => 'Hamilton在采访中被问到退休计划，他说"等我拿到第八冠再说"，围场鸦雀无声。' },
   { title: '围场趣闻', body: () => 'Norris的直播频道粉丝数突破500万，有车迷打趣说"直播比比赛还努力"。' },
-  { title: '围场趣闻', body: () => 'Leclerc在摩纳哥又一次退赛后，被拍到独自坐在游艇上发呆，配图"my life is a meme"。' },
+  { title: '围场趣闻', body: () => 'Leclerc在摩纳哥站前夕发布了一段钢琴演奏视频，配文"为家乡准备的小礼物"。' },
   { title: '围场趣闻', body: () => '一位F1记者试图数清Alonso到底有多少条"El Plan"，最后放弃了。' },
   { title: '围场趣闻', body: () => 'Stroll在停车场撞了自己的赛车，车队公关紧急声明"这只是友情碰撞测试"。' },
 ];
@@ -1353,13 +1353,14 @@ function showToast(message, type = 'info') {
 // ============ RENDER FUNCTIONS ============
 
 function renderStartScreen() {
+  showScreen('start-screen');
   const hasSave = hasSaveGame();
   document.getElementById('start-screen').innerHTML = `
     <div class="start-hero">
       <h1 class="font-display">F1 职业生涯</h1>
       <p class="subtitle">职业生涯模拟器</p>
       <div class="start-buttons">
-        <button class="btn btn-primary btn-lg" onclick="renderBackgroundSelect()">
+        <button class="btn btn-primary btn-lg" onclick="renderNameInput()">
           🏎️ 开始新职业生涯
         </button>
         ${hasSave ? `
@@ -1379,16 +1380,46 @@ function renderStartScreen() {
   `;
 }
 
-function renderBackgroundSelect() {
+function renderNameInput() {
+  showScreen('background-screen');
+  const container = document.getElementById('background-screen');
+  container.innerHTML = `
+    <div class="section-header">
+      <h2 class="font-display">🏎️ 创建你的车手</h2>
+    </div>
+    <div class="card" style="padding:30px;text-align:center;">
+      <div style="font-size:3rem;margin-bottom:16px;">🏁</div>
+      <p class="text-muted" style="margin-bottom:24px;">输入你的车手姓名，开启F1职业生涯</p>
+      <div class="input-group" style="max-width:400px;margin:0 auto;">
+        <input type="text" id="driver-name-input" placeholder="输入车手姓名..." maxlength="20" value=""
+          style="text-align:center;font-size:1.2rem;padding:14px;"
+          onkeydown="if(event.key==='Enter'){var n=document.getElementById('driver-name-input').value.trim();if(n.length>0)renderBackgroundSelect(n);}"
+        >
+      </div>
+      <button class="btn btn-primary btn-lg" id="confirm-name-btn" disabled onclick="var n=document.getElementById('driver-name-input').value.trim();if(n.length>0)renderBackgroundSelect(n);" style="margin-top:20px;">
+        下一步：选择背景 →
+      </button>
+    </div>
+  `;
+
+  const input = document.getElementById('driver-name-input');
+  const btn = document.getElementById('confirm-name-btn');
+  input.addEventListener('input', () => {
+    btn.disabled = input.value.trim().length === 0;
+  });
+  input.focus();
+}
+
+function renderBackgroundSelect(driverName) {
   showScreen('background-screen');
   let selectedBg = null;
 
   const container = document.getElementById('background-screen');
   container.innerHTML = `
     <div class="section-header">
-      <h2 class="font-display">选择你的背景故事</h2>
+      <h2 class="font-display">欢迎，${driverName}！</h2>
     </div>
-    <p class="text-muted" style="margin-bottom:20px">每个背景都会影响你的初始属性，下一步可以选择效力车队</p>
+    <p class="text-muted" style="margin-bottom:20px">选择你的背景故事 — 每个背景都会影响你的初始属性，下一步可以选择效力车队</p>
     <div class="bg-grid" id="bg-grid">
       ${BACKGROUNDS.map(bg => `
         <div class="bg-card" data-bg="${bg.id}">
@@ -1401,12 +1432,8 @@ function renderBackgroundSelect() {
         </div>
       `).join('')}
     </div>
-    <div class="input-group">
-      <label>车手姓名</label>
-      <input type="text" id="driver-name-input" placeholder="输入你的名字..." maxlength="20" value="">
-    </div>
-    <button class="btn btn-primary btn-lg" id="confirm-bg-btn" disabled onclick="confirmBackground()">
-      确认并开始职业生涯
+    <button class="btn btn-primary btn-lg" id="confirm-bg-btn" disabled onclick="confirmBackground('${driverName}')">
+      确认并选择车队
     </button>
   `;
 
@@ -1416,26 +1443,18 @@ function renderBackgroundSelect() {
       container.querySelectorAll('.bg-card').forEach(c => c.classList.remove('selected'));
       card.classList.add('selected');
       selectedBg = card.dataset.bg;
-      updateConfirmBtn();
+      document.getElementById('confirm-bg-btn').disabled = !selectedBg;
     });
   });
-
-  function updateConfirmBtn() {
-    const name = document.getElementById('driver-name-input').value.trim();
-    document.getElementById('confirm-bg-btn').disabled = !(selectedBg && name.length > 0);
-  }
-
-  document.getElementById('driver-name-input').addEventListener('input', updateConfirmBtn);
 }
 
-function confirmBackground() {
-  const name = document.getElementById('driver-name-input').value.trim();
+function confirmBackground(driverName) {
   const selectedCard = document.querySelector('.bg-card.selected');
-  if (!name || !selectedCard) return;
+  if (!driverName || !selectedCard) return;
   const bgId = selectedCard.dataset.bg;
 
   // Go to team selection
-  renderTeamSelect(name, bgId);
+  renderTeamSelect(driverName, bgId);
 }
 
 function renderTeamSelect(name, bgId) {
@@ -1790,7 +1809,7 @@ function retire() {
 function resetGame() {
   gameState = null;
   raceState = null;
-  showStartScreen();
+  renderStartScreen();
 }
 
 function confirmQuickSim() {
@@ -2314,35 +2333,129 @@ function showDriverDetail(driverName) {
   const dnfs = driver.dnf || 0;
   const bestFinish = totalRaces > 0 ? Math.min(...driver.positions.filter(p => p > 0)) : '-';
 
-  // Driver memes based on stats
-  const memes = [];
-  if (driver.name === 'M. Verstappen') memes.push('🏆 "我不是在比赛，我是在巡航。"');
-  if (driver.name === 'L. Hamilton') memes.push('👑 "Still I Rise — 第七冠不是终点。"');
-  if (driver.name === 'F. Alonso') memes.push('😤 "El Plan永远在执行中。"');
-  if (driver.name === 'L. Norris') memes.push('🌴 "赢了去打高尔夫，输了也去打高尔夫。"');
-  if (driver.name === 'C. Leclerc') memes.push('😮‍💨 "又是杆位，又是退赛..."');
-  if (driver.name === 'O. Piastri') memes.push('🧊 "冰面少年，面无表情地超你车。"');
-  if (driver.name === 'A.K. Antonelli') memes.push('🚀 " rookie？什么rookie？"');
-  if (driver.name === 'L. Stroll') memes.push('💰 "爸爸的车队，爸爸的钱。"');
-  if (driver.name === 'Y. Tsunoda') memes.push('💢 "无线电里的愤怒小鸟。"');
-  if (driver.name === 'N. Hulkenberg') memes.push('🦏 "终于等到首秀领奖台...等等，还没有？"');
-  if (driver.name === 'G. Russell') memes.push('📐 "Mr. Consistency — 每场都是P4。"');
-  if (driver.name === 'C. Sainz') memes.push('🌶️ "Smooth Operator，但换队比换胎还快。"');
-  if (driver.name === 'L. Lawson') memes.push('🦁 "红牛青训的下一个赌注。"');
-  if (driver.name === 'O. Bearman') memes.push('🐻 "超级替补专业户。"');
-  if (driver.name === 'P. Gasly') memes.push('🇫🇷 "意大利之魂，法国之心。"');
-  if (driver.name === 'E. Ocon') memes.push(' 😤 "和队友的恩怨比比赛还精彩。"');
+  // Driver-specific memes - unique, fun, non-offensive
+  const DRIVER_MEMES = {
+    'M. Verstappen': [
+      '🏆 "三连冠缔造者，围场里最年轻的传奇之一。"',
+      '🎮 "赛后第一件事？打开模拟器再跑几圈。"',
+      '🏎️ "从小看爸爸比赛，现在爸爸看他破纪录。"',
+      '⚡ "排位赛单圈速度，让所有人怀疑自己的赛车。"',
+    ],
+    'L. Hamilton': [
+      '👑 "七冠王，F1历史上最伟大的车手之一。"',
+      '🎵 "赛道之外是音乐人，时尚圈也有他的一席之地。"',
+      '🌱 "Vegan生活方式的倡导者，用行动证明速度不分饮食。"',
+      '📖 "Still I Rise — 他的座右铭激励了无数人。"',
+    ],
+    'F. Alonso': [
+      '😤 "两冠王但永远充满斗志，El Plan仍在执行。"',
+      '🎯 "围场最狡猾的老狐狸，策略博弈的大师。"',
+      '🏁 "从雷诺到阿斯顿马丁，20年仍在前排战斗。"',
+      '🏆 "勒芒24小时冠军 + F1世界冠军 = 全能赛车手。"',
+    ],
+    'L. Norris': [
+      '🎮 "Twitch直播间的常客，车手圈最会整活的选手。"',
+      '🏌️ "高尔夫比F1还认真，赛后必去球场。"',
+      '😊 "围场人缘最好的车手之一，所有人都是他的朋友。"',
+      '🧇 "Norris vs Verstappen的友谊赛比正赛还精彩。"',
+    ],
+    'C. Leclerc': [
+      '🎹 "钢琴弹得比赛车还好？至少车迷是这么认为的。"',
+      '❤️ "摩纳哥的儿子，为家乡而战是他的执念。"',
+      '🔥 "排位赛之王，Q3永远能跑出惊人圈速。"',
+      '🎶 "如果F1不行了，出张钢琴专辑应该也能畅销。"',
+    ],
+    'O. Piastri': [
+      '🧊 "面无表情地超你的车，然后面无表情地庆祝。"',
+      '🎓 "雷诺青训出品，学霸型车手的代表。"',
+      '🤝 "Norris的最佳搭档，迈凯伦和谐车房的基石。"',
+      '🏆 "F2和F3双料冠军，天赋不需要多言。"',
+    ],
+    'A.K. Antonelli': [
+      '🚀 "Mercedes签下的天才少年，Hamilton的接班人？"',
+      '🇮🇹 "意大利赛车的希望，来自博洛尼亚的骄傲。"',
+      '📚 "年轻的头脑配上成熟的驾驶风格，前途无量。"',
+      '⭐ "从F3直接跳F1？Mercedes相信他可以。"',
+    ],
+    'L. Stroll': [
+      '💎 "阿斯顿马丁的掌舵人之一，车队就是家族事业。"',
+      '🌍 "加拿大唯一的F1车手，整个国家的骄傲。"',
+      '🏀 "篮球迷，赛前必看NBA赛程。"',
+      '📈 "每年都在进步，数据不会说谎。"',
+    ],
+    'G. Russell': [
+      '📐 "Mercedes的新一代领航者，冷静而精准。"',
+      '🇬🇧 "英国赛车精英教育的产物，从GP3到F1一路夺冠。"',
+      '🤓 "围场里的学霸，数学和工程学都不在话下。"',
+      '📊 "每场比赛后都会仔细分析数据，最理性的车手。"',
+    ],
+    'A. Albon': [
+      '🐘 "泰国国宝级车手，亚洲赛车的旗帜。"',
+      '🐈 "养猫达人，社交媒体上全是猫咪照片。"',
+      '🛡️ "Williams的守护者，中游车队的隐形英雄。"',
+      '🏌️ "和Norris的高尔夫球友，但水平差了一截。"',
+    ],
+    'C. Sainz': [
+      '🌶️ "Smooth Operator — 从法拉利到Williams，永远从容。"',
+      '🏎️ "拉力赛世家的孩子，父亲是达喀尔传奇。"',
+      '🎤 "围场里最会穿西装的男人，时尚博主兼职。"',
+      '🇪🇸 "西班牙赛车的新旗帜，阿隆索的接班人。"',
+    ],
+    'Y. Tsunoda': [
+      '🍱 "日本最快的男人，寿司是他的秘密燃料。"',
+      '🎌 "AlphaTauri/V-CARB的灵魂人物，日本车迷的骄傲。"',
+      '🔊 "无线电内容最丰富的车手，每句都是金句。"',
+      '🥋 "将柔道精神带入赛车，永不放弃的斗士。"',
+    ],
+    'I. Hadjar': [
+      '🇫🇷 "法国新生代的力量，红牛青训的新希望。"',
+      '📚 "学霸车手，方程式赛车之外的物理学爱好者。"',
+      '🏁 "F2亚军直奔F1，速度证明了一切。"',
+    ],
+    'E. Ocon': [
+      '🇫🇷 "法国方程式赛车的坚持者，永不言弃的代表。"',
+      '🏭 "雷诺/Alpine的忠实战士，蓝色血脉。"',
+      '♟️ "国际象棋爱好者，赛道上也是策略大师。"',
+      '💪 "从测试车手到分站冠军，逆袭之路的典范。"',
+    ],
+    'O. Bearman': [
+      '🐻 "超级替补的代名词，随时准备上场。"',
+      '🇬🇧 "英国赛车的新星，Ferrari青训的骄傲。"',
+      '⚡ "首秀即得分，天赋不需要解释。"',
+      '🤝 "Haas的新核心，未来可期。"',
+    ],
+    'P. Gasly': [
+      '🇫🇷 "Monza 2020的英雄，那个奇迹之夜永远难忘。"',
+      '🍦 "法国美食的忠实粉丝，赛后必找当地餐厅。"',
+      '🔵 "从红牛到AlphaTauri再到Alpine，每段旅程都有故事。"',
+      '📈 "用实力证明自己，从替补到核心的蜕变。"',
+    ],
+    'J. Doohan': [
+      '🏍️ "拉力赛传奇之子，赛车基因刻在骨子里。"',
+      '🇦🇺 "澳大利亚的F1新希望，家乡车迷的宠儿。"',
+      '🏆 "从F2到Alpine，蓝色战车的新引擎。"',
+    ],
+    'N. Hulkenberg': [
+      '🇩🇪 "德国赛车的坚守者，F1最可靠的替补和主力。"',
+      '🌧️ "雨战大师，湿地条件下总能创造奇迹。"',
+      '💼 "围场里最低调的实力派，从不抱怨只管开。"',
+      '🏎️ "勒芒24小时冠军，F1之外同样闪耀。"',
+    ],
+    'G. Bortoleto': [
+      '🇧🇷 "巴西赛车的新希望，继承塞纳与巴里切罗的衣钵。"',
+      '🏆 "F2冠军直升F1，拉丁美洲的速度天赋。"',
+      '🌟 "Kick Sauber的未来核心，新生代的巴西风暴。"',
+    ],
+  };
 
-  // Add generic memes based on performance
-  if (wins === 0 && totalRaces > 10) memes.push('🥺 "冠军？什么冠军？能完赛就不错了。"');
-  if (dnfs > 5) memes.push('💥 "退赛专业户，赛车修理工的好朋友。"');
-  if (wins > 5) memes.push('👑 "赢麻了，围场公敌。"');
-  if (driver.stats.pace >= 93) memes.push('⚡ "单圈之王，排位赛永远的前排。"');
-  if (driver.stats.wet >= 88) memes.push('🌧️ "雨神转世，湿地上赛道的巫师。"');
-  if (driver.stats.raceIQ >= 90) memes.push('🧠 "赛道上的国际象棋大师。"');
-  if (driver.stats.consistency >= 90) memes.push('🤖 "机器人般精准，从不犯错。"');
-  if (pos === 1) memes.push('🏆 "当前积分榜第一，所有人都在追你。"');
-  if (pos >= 18) memes.push('🐢 "后面风景也不错。"');
+  // Get driver-specific memes
+  const memes = [...(DRIVER_MEMES[driver.name] || [])];
+
+  // Add dynamic memes based on current season performance (only a few, non-duplicate)
+  if (wins > 0 && wins <= 3) memes.push(`🏆 本赛季已赢 ${wins} 场，状态正佳。`);
+  if (wins > 3) memes.push(`🏆 本赛季 ${wins} 场胜利，冠军有力争夺者。`);
+  if (podiums > 5) memes.push(`🥈 本赛季 ${podiums} 次登台，稳定性惊人。`);
+  if (pos === 1) memes.push(`🥇 当前积分榜领跑者，所有人的目标。`);
 
   showScreen('standings-screen');
   document.getElementById('standings-screen').innerHTML = `
