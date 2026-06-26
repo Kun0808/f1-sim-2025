@@ -226,6 +226,34 @@ const NEWS_TEMPLATES = [
   { title: 'F1历史', body: () => '今天是一位F1传奇车手的生日，围场上下纷纷送上祝福。' },
   { title: 'F1历史', body: () => '本周末的赛道曾见证过F1历史上最激动人心的超车之一。' },
   { title: 'F1历史', body: () => '恰逢某支传奇车队成立周年纪念，车队发布了特别版涂装。' },
+  // 车手梗与趣闻
+  { title: '围场趣闻', body: () => 'Verstappen又被拍到在车房里打F1电子游戏，而且选的角色不是自己。' },
+  { title: '围场趣闻', body: () => 'Hamilton在社交媒体上发布了一张 vegan 食谱照片，获得超过200万点赞。' },
+  { title: '围场趣闻', body: () => 'Alonso在采访中暗示自己"可能再赛十年"，围场集体沉默三秒后爆笑。' },
+  { title: '围场趣闻', body: () => 'Norris和Piastri被拍到一起打迷你高尔夫，两人赌注是一顿晚餐。' },
+  { title: '围场趣闻', body: () => 'Leclerc的钢琴演奏视频在社交媒体上走红，车迷纷纷要求出专辑。' },
+  { title: '围场趣闻', body: () => 'Stroll的帽子系列又出了新色款，据说这次的颜色叫"父亲的钱包色"。' },
+  { title: '围场趣闻', body: () => 'Tsunoda在无线电里又爆粗口了，这次FIA决定不予处罚因为"听不懂日语脏话"。' },
+  { title: '围场趣闻', body: () => 'Hulkenberg又被问到何时能上领奖台，他无奈回答："每年都问，每年都没有。"' },
+  { title: '围场趣闻', body: () => 'Russell在Mercedes车房里被发现偷偷量了Hamilton的座椅尺寸。' },
+  { title: '围场趣闻', body: () => 'Sainz的"Smooth Operator"铃声在围场里传染了，已有5位车手手机设置为同一铃声。' },
+  { title: '围场趣闻', body: () => 'Bearman又一次被叫去当替补，围场戏称他为"F1最强消防员"。' },
+  { title: '围场趣闻', body: () => 'Gasly和Ocon据说在食堂互相无视，两人的桌子之间隔了整整三排。' },
+  { title: '围场趣闻', body: () => '一位车手的宠物狗在围场走丢，结果在另一个车队的车房里找到了——它正吃着顶级狗粮。' },
+  { title: '围场趣闻', body: () => 'Antonelli被问到如何看待"新秀"标签时回答："什么新秀？我已经模拟器跑了5000小时了。"' },
+  { title: '围场趣闻', body: () => '围场餐厅主厨透露，某位世界冠军每场比赛前必吃的"幸运餐"是一碗意大利面配两个荷包蛋。' },
+  { title: '围场趣闻', body: () => '一位匿名车手承认自己赛前会听"Simply Red"的歌来放松，围场一片哗然。' },
+  { title: '围场趣闻', body: () => 'F1官方考虑在赛车方向盘上安装"表情包按钮"，让车手在无线电中发送表情。' },
+  { title: '围场趣闻', body: () => 'Alonso的Instagram更新了一张自拍，配文"El Plan 第17年"，评论区炸了。' },
+  { title: '围场趣闻', body: () => 'Verstappen在模拟器赛中输给了一位12岁的少年，赛后他表示"这小孩未来可期"。' },
+  { title: '围场趣闻', body: () => '某车手在赛前去当地著名景点打卡迷路了，差点错过自由练习赛。' },
+  { title: '围场趣闻', body: () => 'F1车手协会正在讨论是否应该禁止在无线电中唱歌，因为"实在太难听了"。' },
+  { title: '围场趣闻', body: () => '一位车队领队透露，他选择车手的首要标准不是速度，而是"能不能在赞助商面前吃相好看"。' },
+  { title: '围场趣闻', body: () => 'Hamilton在采访中被问到退休计划，他说"等我拿到第八冠再说"，围场鸦雀无声。' },
+  { title: '围场趣闻', body: () => 'Norris的直播频道粉丝数突破500万，有车迷打趣说"直播比比赛还努力"。' },
+  { title: '围场趣闻', body: () => 'Leclerc在摩纳哥又一次退赛后，被拍到独自坐在游艇上发呆，配图"my life is a meme"。' },
+  { title: '围场趣闻', body: () => '一位F1记者试图数清Alonso到底有多少条"El Plan"，最后放弃了。' },
+  { title: '围场趣闻', body: () => 'Stroll在停车场撞了自己的赛车，车队公关紧急声明"这只是友情碰撞测试"。' },
 ];
 
 // ============ RANDOM RACE EVENTS ============
@@ -688,7 +716,9 @@ function createNewGame(name, backgroundId, selectedTeamIdx) {
     underdogPodium: 0,
     // Sponsor system
     sponsor: null,
+    sponsorYearsLeft: 0,
     totalEarnings: 0,
+    money: 50, // Starting balance in $M
   };
 
   return gameState;
@@ -726,14 +756,14 @@ function selectSponsor(sponsorId) {
 
   // Remove old sponsor bonus
   if (gameState.sponsor && gameState.sponsor.bonus) {
-    gameState.stats[gameState.sponsor.bonus] = clamp(gameState.stats[gameState.sponsor.bonus] - gameState.sponsor.amount, 50, 99);
+    gameState.stats[gameState.sponsor.bonus] = clamp(gameState.stats[gameState.sponsor.bonus] - gameState.sponsor.amount, 50, 100);
   }
 
   gameState.sponsor = offer;
 
   // Apply new sponsor bonus
   if (offer.bonus) {
-    gameState.stats[offer.bonus] = clamp(gameState.stats[offer.bonus] + offer.amount, 50, 99);
+    gameState.stats[offer.bonus] = clamp(gameState.stats[offer.bonus] + offer.amount, 50, 100);
   }
 }
 
@@ -953,7 +983,7 @@ function applyDecisionEffects(effects) {
   const statKeys = ['pace', 'consistency', 'wet', 'defend', 'attack', 'raceIQ'];
   statKeys.forEach(key => {
     if (effects[key]) {
-      gameState.stats[key] = clamp(gameState.stats[key] + Math.round(effects[key] * 0.3), 50, 99);
+      gameState.stats[key] = clamp(gameState.stats[key] + Math.round(effects[key] * 0.3), 50, 100);
     }
   });
 }
@@ -961,15 +991,17 @@ function applyDecisionEffects(effects) {
 function train(statKey) {
   if (gameState.trainedThisWeek) return false;
 
+  const currentVal = gameState.stats[statKey];
   const gain = 4 + Math.floor(Math.random() * 4); // 4-7
+  const actualGain = Math.min(gain, 100 - currentVal); // Don't exceed 100
   const otherKeys = Object.keys(gameState.stats).filter(k => k !== statKey);
   const lossKey = otherKeys[Math.floor(Math.random() * otherKeys.length)];
 
-  gameState.stats[statKey] = clamp(gameState.stats[statKey] + gain, 50, 99);
-  gameState.stats[lossKey] = clamp(gameState.stats[lossKey] - 1, 50, 99);
+  gameState.stats[statKey] = clamp(currentVal + actualGain, 50, 100);
+  gameState.stats[lossKey] = clamp(gameState.stats[lossKey] - 1, 50, 100);
   gameState.trainedThisWeek = true;
 
-  return { gained: statKey, gain, lost: lossKey };
+  return { gained: statKey, gain: actualGain, lost: lossKey };
 }
 
 function generateContractOffers() {
@@ -1146,6 +1178,25 @@ function startNewSeason() {
     gameState.seasonsAtCurrentTeam = 1;
   }
 
+  // Pay salary + sponsor income at start of new season
+  const team = TEAMS[gameState.teamIdx];
+  const sponsorIncome = gameState.sponsor ? (gameState.sponsor.salary || 0) : 0;
+  const seasonIncome = (team.salary ? team.salary[0] : 5) + sponsorIncome;
+  gameState.money += seasonIncome;
+  gameState.totalEarnings += seasonIncome;
+
+  // Decrement sponsor contract years
+  if (gameState.sponsorYearsLeft > 0) {
+    gameState.sponsorYearsLeft--;
+    if (gameState.sponsorYearsLeft <= 0) {
+      // Sponsor contract expired
+      if (gameState.sponsor && gameState.sponsor.bonus) {
+        gameState.stats[gameState.sponsor.bonus] = clamp(gameState.stats[gameState.sponsor.bonus] - gameState.sponsor.amount, 50, 100);
+      }
+      gameState.sponsor = null;
+    }
+  }
+
   // Reset points
   gameState.drivers.forEach(d => {
     d.points = 0;
@@ -1255,6 +1306,8 @@ function loadGame() {
       if (gameState.underdogPodium === undefined) gameState.underdogPodium = 0;
       if (gameState.sponsor === undefined) gameState.sponsor = null;
       if (gameState.totalEarnings === undefined) gameState.totalEarnings = 0;
+      if (gameState.money === undefined) gameState.money = 50;
+      if (gameState.sponsorYearsLeft === undefined) gameState.sponsorYearsLeft = 0;
       return true;
     }
     return false;
@@ -1469,6 +1522,7 @@ function renderHub() {
       <div class="driver-info">
         <span class="driver-name">${gameState.playerName}</span>
         <span class="team-badge ${team.css}">${team.short}</span>
+        <span style="font-size:0.8rem;color:var(--green);margin-left:8px;">💵 $${(gameState.money || 0).toFixed(1)}M</span>
       </div>
       <div class="season-info">
         <div class="year">${gameState.season}</div>
@@ -1523,6 +1577,11 @@ function renderHub() {
         <div class="hub-icon">💰</div>
         <div class="hub-title">赞助商</div>
         <div class="hub-desc">${gameState.sponsor ? gameState.sponsor.name : '尚未签约'}</div>
+      </div>
+      <div class="hub-card" onclick="renderPR()">
+        <div class="hub-icon">📺</div>
+        <div class="hub-title">公关管理</div>
+        <div class="hub-desc">花费金钱提升声望</div>
       </div>
     </div>
 
@@ -2024,7 +2083,8 @@ function renderTraining() {
             <div class="train-name">${STAT_NAMES[key]}</div>
             <div class="train-effect">
               当前: <strong style="color:${STAT_COLORS[key]}">${gameState.stats[key]}</strong>
-              → 预计提升至 <strong style="color:var(--green)">${gameState.stats[key] + 4}~${gameState.stats[key] + 7}</strong>
+              → 预计提升至 <strong style="color:var(--green)">${Math.min(gameState.stats[key] + 4, 100)}~${Math.min(gameState.stats[key] + 7, 100)}</strong>
+              ${gameState.stats[key] >= 97 ? '<span style="color:var(--gold);font-size:0.75rem;"> (接近上限)</span>' : ''}
               · 随机另一属性 -1
             </div>
           </div>
@@ -2172,7 +2232,7 @@ function renderStandings() {
     </div>
 
     <div class="card">
-      <h3 style="margin-bottom:12px;font-size:0.9rem;color:var(--text-secondary);">车手积分榜</h3>
+      <h3 style="margin-bottom:12px;font-size:0.9rem;color:var(--text-secondary);">车手积分榜 <span style="font-size:0.75rem;color:var(--text-muted);">(点击车手名查看详情)</span></h3>
       <table class="standings-table">
         <thead>
           <tr>
@@ -2189,7 +2249,7 @@ function renderStandings() {
             return `
               <tr class="${d.isPlayer ? 'player-row' : ''}">
                 <td class="pos-col ${posClass}">${d.position}</td>
-                <td>${d.name} ${d.isPlayer ? '⭐' : ''}</td>
+                <td><span style="cursor:pointer;color:var(--f1-red);" onclick="showDriverDetail('${d.name}')">${d.name}</span> ${d.isPlayer ? '⭐' : ''}</td>
                 <td><span class="team-badge ${team.css}" style="font-size:0.7rem;padding:2px 6px;">${team.short}</span></td>
                 <td class="pts-col">${d.points}</td>
               </tr>
@@ -2224,6 +2284,122 @@ function renderStandings() {
         </tbody>
       </table>
     </div>
+  `;
+}
+
+function showDriverDetail(driverName) {
+  const driver = gameState.drivers.find(d => d.name === driverName);
+  if (!driver) return;
+
+  const team = TEAMS.find(t => t.id === driver.teamId);
+  const standings = getDriverStandings();
+  const standing = standings.find(d => d.name === driverName);
+  const pos = standing ? standing.position : '-';
+
+  // Calculate driver stats
+  const totalRaces = driver.positions.length;
+  const wins = driver.positions.filter(p => p === 1).length;
+  const podiums = driver.positions.filter(p => p <= 3).length;
+  const dnfs = driver.dnf || 0;
+  const bestFinish = totalRaces > 0 ? Math.min(...driver.positions.filter(p => p > 0)) : '-';
+
+  // Driver memes based on stats
+  const memes = [];
+  if (driver.name === 'M. Verstappen') memes.push('🏆 "我不是在比赛，我是在巡航。"');
+  if (driver.name === 'L. Hamilton') memes.push('👑 "Still I Rise — 第七冠不是终点。"');
+  if (driver.name === 'F. Alonso') memes.push('😤 "El Plan永远在执行中。"');
+  if (driver.name === 'L. Norris') memes.push('🌴 "赢了去打高尔夫，输了也去打高尔夫。"');
+  if (driver.name === 'C. Leclerc') memes.push('😮‍💨 "又是杆位，又是退赛..."');
+  if (driver.name === 'O. Piastri') memes.push('🧊 "冰面少年，面无表情地超你车。"');
+  if (driver.name === 'A.K. Antonelli') memes.push('🚀 " rookie？什么rookie？"');
+  if (driver.name === 'L. Stroll') memes.push('💰 "爸爸的车队，爸爸的钱。"');
+  if (driver.name === 'Y. Tsunoda') memes.push('💢 "无线电里的愤怒小鸟。"');
+  if (driver.name === 'N. Hulkenberg') memes.push('🦏 "终于等到首秀领奖台...等等，还没有？"');
+  if (driver.name === 'G. Russell') memes.push('📐 "Mr. Consistency — 每场都是P4。"');
+  if (driver.name === 'C. Sainz') memes.push('🌶️ "Smooth Operator，但换队比换胎还快。"');
+  if (driver.name === 'L. Lawson') memes.push('🦁 "红牛青训的下一个赌注。"');
+  if (driver.name === 'O. Bearman') memes.push('🐻 "超级替补专业户。"');
+  if (driver.name === 'P. Gasly') memes.push('🇫🇷 "意大利之魂，法国之心。"');
+  if (driver.name === 'E. Ocon') memes.push(' 😤 "和队友的恩怨比比赛还精彩。"');
+
+  // Add generic memes based on performance
+  if (wins === 0 && totalRaces > 10) memes.push('🥺 "冠军？什么冠军？能完赛就不错了。"');
+  if (dnfs > 5) memes.push('💥 "退赛专业户，赛车修理工的好朋友。"');
+  if (wins > 5) memes.push('👑 "赢麻了，围场公敌。"');
+  if (driver.stats.pace >= 93) memes.push('⚡ "单圈之王，排位赛永远的前排。"');
+  if (driver.stats.wet >= 88) memes.push('🌧️ "雨神转世，湿地上赛道的巫师。"');
+  if (driver.stats.raceIQ >= 90) memes.push('🧠 "赛道上的国际象棋大师。"');
+  if (driver.stats.consistency >= 90) memes.push('🤖 "机器人般精准，从不犯错。"');
+  if (pos === 1) memes.push('🏆 "当前积分榜第一，所有人都在追你。"');
+  if (pos >= 18) memes.push('🐢 "后面风景也不错。"');
+
+  showScreen('standings-screen');
+  document.getElementById('standings-screen').innerHTML = `
+    <button class="back-btn" onclick="renderStandings()">← 返回积分榜</button>
+    <div class="section-header">
+      <h2 class="font-display">👤 ${driver.name}</h2>
+    </div>
+
+    <div class="card" style="padding:20px;">
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+        <span class="team-badge ${team.css}" style="font-size:1rem;padding:6px 12px;">${team.short}</span>
+        <div>
+          <div style="font-size:0.8rem;color:var(--text-secondary);">当前排名</div>
+          <div style="font-family:'Orbitron';font-size:1.8rem;font-weight:800;color:var(--f1-red);">P${pos}</div>
+        </div>
+        <div style="margin-left:auto;text-align:right;">
+          <div style="font-size:0.8rem;color:var(--text-secondary);">赛季积分</div>
+          <div style="font-family:'Orbitron';font-size:1.8rem;font-weight:800;">${driver.points}</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px;">
+        <div style="text-align:center;padding:12px;background:var(--bg);border-radius:8px;">
+          <div style="font-family:'Orbitron';font-size:1.5rem;font-weight:700;color:var(--gold);">${wins}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">分站冠军</div>
+        </div>
+        <div style="text-align:center;padding:12px;background:var(--bg);border-radius:8px;">
+          <div style="font-family:'Orbitron';font-size:1.5rem;font-weight:700;">${podiums}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">领奖台</div>
+        </div>
+        <div style="text-align:center;padding:12px;background:var(--bg);border-radius:8px;">
+          <div style="font-family:'Orbitron';font-size:1.5rem;font-weight:700;color:var(--green);">${bestFinish !== '-' ? 'P' + bestFinish : '-'}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">最佳完赛</div>
+        </div>
+        <div style="text-align:center;padding:12px;background:var(--bg);border-radius:8px;">
+          <div style="font-family:'Orbitron';font-size:1.5rem;font-weight:700;color:var(--f1-red);">${dnfs}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">退赛次数</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;">
+      <h3 style="margin-bottom:16px;font-size:0.9rem;color:var(--text-secondary);">能力属性</h3>
+      ${Object.keys(driver.stats).filter(k => k !== 'skill').map(key => {
+        const val = driver.stats[key];
+        const barColor = val >= 90 ? 'var(--gold)' : val >= 80 ? 'var(--green)' : val >= 70 ? 'var(--f1-red)' : 'var(--text-secondary)';
+        return `
+          <div style="margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:4px;">
+              <span>${STAT_NAMES[key]}</span>
+              <strong style="color:${barColor};">${val}</strong>
+            </div>
+            <div style="height:6px;background:var(--bg);border-radius:3px;overflow:hidden;">
+              <div style="height:100%;width:${val}%;background:${barColor};border-radius:3px;transition:width 0.3s;"></div>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+
+    ${memes.length > 0 ? `
+      <div class="card" style="padding:16px;border-color:var(--gold);">
+        <h3 style="margin-bottom:12px;font-size:0.9rem;color:var(--gold);">🎭 围场梗</h3>
+        ${memes.map(m => `<div style="padding:4px 0;font-size:0.85rem;">${m}</div>`).join('')}
+      </div>
+    ` : ''}
+
+    <button class="btn btn-secondary" onclick="renderStandings()" style="margin-top:12px;">← 返回积分榜</button>
   `;
 }
 
@@ -2298,6 +2474,165 @@ function renderAchievements() {
   `;
 }
 
+// ============ PR MANAGEMENT ============
+
+const PR_OPTIONS = [
+  {
+    id: 'press_conf',
+    name: '新闻发布会',
+    icon: '🎤',
+    desc: '召开正式新闻发布会，提升媒体关系',
+    cost: 2,
+    effects: { mediaRep: 8 },
+    effectDesc: '媒体关系 +8',
+  },
+  {
+    id: 'fan_event',
+    name: '车迷见面会',
+    icon: '👋',
+    desc: '举办车迷互动活动，提升车迷人气',
+    cost: 3,
+    effects: { fanPop: 10 },
+    effectDesc: '车迷人气 +10',
+  },
+  {
+    id: 'charity',
+    name: '慈善活动',
+    icon: '❤️',
+    desc: '参与慈善公益，全面提升声誉',
+    cost: 5,
+    effects: { fanPop: 5, mediaRep: 5, driverRep: 8, teamTrust: 3 },
+    effectDesc: '全属性小幅提升',
+  },
+  {
+    id: 'social_media',
+    name: '社交媒体营销',
+    icon: '📱',
+    desc: '聘请专业团队运营社交媒体',
+    cost: 4,
+    effects: { fanPop: 12, mediaRep: 4 },
+    effectDesc: '车迷人气 +12, 媒体 +4',
+  },
+  {
+    id: 'team_dinner',
+    name: '车队团建',
+    icon: '🍽️',
+    desc: '邀请车队成员共进晚餐，增进关系',
+    cost: 3,
+    effects: { teamTrust: 10 },
+    effectDesc: '车队信任 +10',
+  },
+  {
+    id: 'luxury_pr',
+    name: '顶级公关团队',
+    icon: '✨',
+    desc: '聘请顶级公关团队全面包装形象',
+    cost: 10,
+    effects: { mediaRep: 15, fanPop: 15, driverRep: 10, teamTrust: 5 },
+    effectDesc: '全属性大幅提升',
+  },
+];
+
+function renderPR() {
+  showScreen('sponsor-screen');
+
+  const rep = gameState.reputation;
+
+  document.getElementById('sponsor-screen').innerHTML = `
+    <button class="back-btn" onclick="renderHub()">← 返回主页</button>
+    <div class="section-header">
+      <h2 class="font-display">📺 公关管理</h2>
+    </div>
+
+    <div class="card" style="padding:12px 16px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:0.85rem;color:var(--text-secondary);">💵 当前余额</span>
+        <strong style="font-family:'Orbitron';font-size:1.3rem;color:var(--green);">$${(gameState.money || 0).toFixed(1)}M</strong>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;font-size:0.8rem;">
+        <div>🏎️ 车队信任: <strong style="color:var(--text-primary);">${rep.teamTrust}</strong></div>
+        <div>📺 媒体关系: <strong style="color:var(--text-primary);">${rep.mediaRelation}</strong></div>
+        <div>👥 车迷人气: <strong style="color:var(--text-primary);">${rep.fanPopularity}</strong></div>
+        <div>🤝 车手尊重: <strong style="color:var(--text-primary);">${rep.driverRespect}</strong></div>
+      </div>
+    </div>
+
+    <h3 style="margin:16px 0 12px;font-size:0.9rem;color:var(--text-secondary);">公关活动</h3>
+    <div style="display:grid;gap:10px;">
+      ${PR_OPTIONS.map(opt => {
+        const canAfford = (gameState.money || 0) >= opt.cost;
+        return `
+          <div class="contract-card" ${canAfford ? `onclick="confirmPR('${opt.id}')"` : ''} style="${canAfford ? '' : 'opacity:0.5;cursor:not-allowed;'}">
+            <div class="contract-team">
+              <span style="font-size:1.5rem;margin-right:8px;">${opt.icon}</span>
+              ${opt.name}
+              <span style="margin-left:auto;font-family:'Orbitron';font-weight:700;color:${canAfford ? 'var(--green)' : 'var(--f1-red)'};">$${opt.cost}M</span>
+            </div>
+            <div style="font-size:0.85rem;color:var(--text-secondary);margin-top:4px;">
+              ${opt.desc}
+            </div>
+            <div style="font-size:0.8rem;color:var(--gold);margin-top:4px;">
+              📈 ${opt.effectDesc}
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function confirmPR(prId) {
+  const opt = PR_OPTIONS.find(o => o.id === prId);
+  if (!opt) return;
+  if ((gameState.money || 0) < opt.cost) {
+    showToast('余额不足！', 'error');
+    return;
+  }
+
+  showScreen('sponsor-screen');
+  document.getElementById('sponsor-screen').innerHTML = `
+    <button class="back-btn" onclick="renderPR()">← 返回公关</button>
+    <div class="section-header">
+      <h2 class="font-display">${opt.icon} 确认</h2>
+    </div>
+    <div class="card" style="padding:24px;text-align:center;">
+      <div style="font-size:3rem;margin-bottom:12px;">${opt.icon}</div>
+      <h3>${opt.name}</h3>
+      <p class="text-muted" style="margin-top:8px;">${opt.desc}</p>
+      <div style="margin-top:16px;font-size:0.85rem;line-height:1.8;">
+        <div>💵 花费: <strong style="color:var(--f1-red);">$${opt.cost}M</strong></div>
+        <div>📈 效果: <strong style="color:var(--gold);">${opt.effectDesc}</strong></div>
+        <div>💵 签约后余额: <strong style="color:var(--green);">$${((gameState.money || 0) - opt.cost).toFixed(1)}M</strong></div>
+      </div>
+      <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;">
+        <button class="btn btn-secondary" onclick="renderPR()">取消</button>
+        <button class="btn btn-primary" onclick="executePR('${opt.id}')">确认</button>
+      </div>
+    </div>
+  `;
+}
+
+function executePR(prId) {
+  const opt = PR_OPTIONS.find(o => o.id === prId);
+  if (!opt) return;
+  if ((gameState.money || 0) < opt.cost) {
+    showToast('余额不足！', 'error');
+    return;
+  }
+
+  gameState.money -= opt.cost;
+  const rep = gameState.reputation;
+
+  if (opt.effects.mediaRep) rep.mediaRelation = clamp(rep.mediaRelation + opt.effects.mediaRep, 0, 100);
+  if (opt.effects.fanPop) rep.fanPopularity = clamp(rep.fanPopularity + opt.effects.fanPop, 0, 100);
+  if (opt.effects.driverRep) rep.driverRespect = clamp(rep.driverRespect + opt.effects.driverRep, 0, 100);
+  if (opt.effects.teamTrust) rep.teamTrust = clamp(rep.teamTrust + opt.effects.teamTrust, 0, 100);
+
+  showToast(`已执行 ${opt.name}！${opt.effectDesc}`, 'success');
+  renderPR();
+  saveGame();
+}
+
 function renderSponsor() {
   showScreen('sponsor-screen');
   const currentSponsor = gameState.sponsor;
@@ -2307,6 +2642,13 @@ function renderSponsor() {
     <button class="back-btn" onclick="renderHub()">← 返回主页</button>
     <div class="section-header">
       <h2 class="font-display">💰 赞助商</h2>
+    </div>
+
+    <div class="card" style="padding:12px 16px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:0.85rem;color:var(--text-secondary);">💵 当前余额</span>
+        <strong style="font-family:'Orbitron';font-size:1.3rem;color:var(--green);">$${(gameState.money || 0).toFixed(1)}M</strong>
+      </div>
     </div>
 
     ${currentSponsor ? `
@@ -2319,6 +2661,12 @@ function renderSponsor() {
             <div style="font-size:0.85rem;color:var(--text-secondary);">${currentSponsor.desc}</div>
           </div>
         </div>
+        ${gameState.sponsorYearsLeft > 0 ? `
+          <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:0.8rem;">
+            📅 合同剩余: <strong style="color:var(--gold);">${gameState.sponsorYearsLeft}年</strong>
+            ${gameState.sponsorYearsLeft > 0 ? `<br>⚠️ 提前解约需支付违约金 <strong style="color:var(--f1-red);">$${(currentSponsor.salary * gameState.sponsorYearsLeft * 2).toFixed(1)}M</strong>` : ''}
+          </div>
+        ` : ''}
       </div>
     ` : `
       <div class="card" style="text-align:center;padding:30px;">
@@ -2329,30 +2677,143 @@ function renderSponsor() {
 
     <h3 style="margin:20px 0 12px;font-size:0.9rem;color:var(--text-secondary);">可签约赞助商</h3>
     <div style="display:grid;gap:10px;">
-      ${offers.map(offer => `
-        <div class="contract-card" onclick="confirmSponsor('${offer.id}')">
-          <div class="contract-team">
-            <span style="font-size:1.5rem;margin-right:8px;">${offer.icon}</span>
-            ${offer.name}
-            ${currentSponsor && currentSponsor.id === offer.id ? '<span class="badge badge-green" style="margin-left:8px;">当前</span>' : ''}
+      ${offers.map(offer => {
+        const contractYears = 1 + Math.floor(Math.random() * 3);
+        const isLocked = gameState.sponsorYearsLeft > 0;
+        const isCurrent = currentSponsor && currentSponsor.id === offer.id;
+        return `
+          <div class="contract-card" ${isLocked || isCurrent ? '' : `onclick="confirmSponsor('${offer.id}', ${contractYears})"`} style="${isLocked || isCurrent ? 'opacity:0.5;cursor:not-allowed;' : ''}">
+            <div class="contract-team">
+              <span style="font-size:1.5rem;margin-right:8px;">${offer.icon}</span>
+              ${offer.name}
+              ${isCurrent ? '<span class="badge badge-green" style="margin-left:8px;">当前</span>' : ''}
+              ${isLocked && !isCurrent ? '<span class="badge" style="margin-left:8px;background:var(--bg);color:var(--text-muted);">合同锁定中</span>' : ''}
+            </div>
+            <div class="contract-details">
+              <div class="contract-detail">💰 年薪加成: <span class="value">+$${offer.salary}M</span></div>
+              <div class="contract-detail">📅 合同年限: <span class="value">${contractYears}年</span></div>
+              ${offer.bonus ? `<div class="contract-detail">📈 属性加成: <span class="value">${STAT_NAMES[offer.bonus].split(' ')[1]} +${offer.amount}</span></div>` : '<div class="contract-detail">📈 无属性加成</div>'}
+            </div>
           </div>
-          <div class="contract-details">
-            <div class="contract-detail">💰 年薪加成: <span class="value">+$${offer.salary}M</span></div>
-            ${offer.bonus ? `<div class="contract-detail">📈 属性加成: <span class="value">${STAT_NAMES[offer.bonus].split(' ')[1]} +${offer.amount}</span></div>` : '<div class="contract-detail">📈 无属性加成</div>'}
-          </div>
-        </div>
-      `).join('')}
+        `;
+      }).join('')}
     </div>
 
+    ${gameState.sponsorYearsLeft > 0 ? `
+      <button class="btn btn-secondary" onclick="confirmBreakSponsor()" style="margin-top:16px;border-color:var(--f1-red);color:var(--f1-red);">
+        💔 提前解约 (违约金 $${(currentSponsor.salary * gameState.sponsorYearsLeft * 2).toFixed(1)}M)
+      </button>
+    ` : ''}
+
     <p style="font-size:0.8rem;color:var(--text-muted);margin-top:16px;text-align:center;">
-      更换赞助商会替换当前赞助商的加成效果
+      签约后合同年限内不可更换，提前解约需支付违约金
     </p>
   `;
 }
 
-function confirmSponsor(sponsorId) {
-  selectSponsor(sponsorId);
-  showToast(`已签约 ${gameState.sponsor.name}！`, 'success');
+function confirmSponsor(sponsorId, contractYears) {
+  const offer = getSponsorOffers().find(s => s.id === sponsorId);
+  if (!offer) return;
+
+  showScreen('sponsor-screen');
+  document.getElementById('sponsor-screen').innerHTML = `
+    <button class="back-btn" onclick="renderSponsor()">← 返回赞助商</button>
+    <div class="section-header">
+      <h2 class="font-display">🤝 确认签约</h2>
+    </div>
+    <div class="card" style="padding:24px;text-align:center;">
+      <div style="font-size:3rem;margin-bottom:12px;">${offer.icon}</div>
+      <h3>${offer.name}</h3>
+      <p class="text-muted" style="margin-top:8px;">${offer.desc}</p>
+      <div style="margin-top:16px;text-align:left;font-size:0.85rem;line-height:1.8;">
+        <div>💰 年薪加成: <strong style="color:var(--green);">+$${offer.salary}M/年</strong></div>
+        <div>📅 合同年限: <strong>${contractYears}年</strong></div>
+        <div>💵 签约奖金: <strong style="color:var(--green);">$${(offer.salary * 0.5).toFixed(1)}M</strong> (签约即得)</div>
+        ${offer.bonus ? `<div>📈 属性加成: <strong>${STAT_NAMES[offer.bonus].split(' ')[1]} +${offer.amount}</strong></div>` : ''}
+        <div>⚠️ 合同期内不可更换，提前解约需支付违约金</div>
+      </div>
+      <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;">
+        <button class="btn btn-secondary" onclick="renderSponsor()">取消</button>
+        <button class="btn btn-primary" onclick="signSponsor('${sponsorId}', ${contractYears})">确认签约</button>
+      </div>
+    </div>
+  `;
+}
+
+function signSponsor(sponsorId, contractYears) {
+  const offer = getSponsorOffers().find(s => s.id === sponsorId);
+  if (!offer) return;
+
+  // Remove old sponsor bonus if any (shouldn't happen if locked, but just in case)
+  if (gameState.sponsor && gameState.sponsor.bonus) {
+    gameState.stats[gameState.sponsor.bonus] = clamp(gameState.stats[gameState.sponsor.bonus] - gameState.sponsor.amount, 50, 100);
+  }
+
+  gameState.sponsor = offer;
+  gameState.sponsorYearsLeft = contractYears;
+
+  // Apply new sponsor bonus
+  if (offer.bonus) {
+    gameState.stats[offer.bonus] = clamp(gameState.stats[offer.bonus] + offer.amount, 50, 100);
+  }
+
+  // Signing bonus
+  const signingBonus = offer.salary * 0.5;
+  gameState.money += signingBonus;
+  gameState.totalEarnings += signingBonus;
+
+  showToast(`已签约 ${offer.name}！获得签约奖金 $${signingBonus.toFixed(1)}M`, 'success');
+  renderSponsor();
+  saveGame();
+}
+
+function confirmBreakSponsor() {
+  const currentSponsor = gameState.sponsor;
+  if (!currentSponsor || gameState.sponsorYearsLeft <= 0) return;
+
+  const penalty = currentSponsor.salary * gameState.sponsorYearsLeft * 2;
+
+  showScreen('sponsor-screen');
+  document.getElementById('sponsor-screen').innerHTML = `
+    <button class="back-btn" onclick="renderSponsor()">← 返回赞助商</button>
+    <div class="section-header">
+      <h2 class="font-display">💔 确认解约</h2>
+    </div>
+    <div class="card" style="padding:24px;text-align:center;">
+      <div style="font-size:3rem;margin-bottom:12px;">💔</div>
+      <h3>确定要与 ${currentSponsor.name} 解约吗？</h3>
+      <p class="text-muted" style="margin-top:8px;">
+        解约后将失去所有属性加成和年薪加成。<br>
+        需要支付违约金: <strong style="color:var(--f1-red);">$${penalty.toFixed(1)}M</strong><br>
+        当前余额: <strong style="color:var(--green);">$${(gameState.money || 0).toFixed(1)}M</strong>
+      </p>
+      ${gameState.money < penalty ? '<p style="color:var(--f1-red);margin-top:8px;">⚠️ 余额不足，无法支付违约金！</p>' : ''}
+      <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;">
+        <button class="btn btn-secondary" onclick="renderSponsor()">取消</button>
+        <button class="btn btn-primary" onclick="breakSponsor()" style="background:var(--f1-red);" ${gameState.money < penalty ? 'disabled' : ''}>确认解约</button>
+      </div>
+    </div>
+  `;
+}
+
+function breakSponsor() {
+  const currentSponsor = gameState.sponsor;
+  if (!currentSponsor) return;
+
+  const penalty = currentSponsor.salary * gameState.sponsorYearsLeft * 2;
+  if (gameState.money < penalty) return;
+
+  gameState.money -= penalty;
+
+  // Remove sponsor bonus
+  if (currentSponsor.bonus) {
+    gameState.stats[currentSponsor.bonus] = clamp(gameState.stats[currentSponsor.bonus] - currentSponsor.amount, 50, 100);
+  }
+
+  gameState.sponsor = null;
+  gameState.sponsorYearsLeft = 0;
+
+  showToast(`已与 ${currentSponsor.name} 解约，支付违约金 $${penalty.toFixed(1)}M`, 'info');
   renderSponsor();
   saveGame();
 }

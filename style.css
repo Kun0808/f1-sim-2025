@@ -148,11 +148,13 @@ h3 { font-size: 1.2rem; font-weight: 600; }
 .btn-secondary {
   background: var(--bg-card);
   color: var(--text-primary);
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
+  font-weight: 700;
 }
 .btn-secondary:hover:not(:disabled) {
   background: var(--bg-card-hover);
-  border-color: var(--border-light);
+  border-color: var(--f1-red);
+  color: var(--f1-red);
 }
 .btn-success {
   background: var(--green);
@@ -750,20 +752,26 @@ h3 { font-size: 1.2rem; font-weight: 600; }
 
 /* ---- Back Button ---- */
 .back-btn {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
   font-size: 0.9rem;
+  font-weight: 600;
   cursor: pointer;
-  padding: 8px 0;
+  padding: 10px 16px;
   margin-bottom: 16px;
-  display: flex;
+  border-radius: 8px;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   font-family: 'Inter', sans-serif;
-  transition: color 0.2s;
+  transition: all 0.2s;
 }
-.back-btn:hover { color: var(--text-primary); }
+.back-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-card-hover);
+  border-color: var(--f1-red);
+}
 
 /* ---- Divider ---- */
 .divider {
