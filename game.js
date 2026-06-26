@@ -231,6 +231,7 @@ const NEWS_TEMPLATES = [
 // ============ RANDOM RACE EVENTS ============
 
 const RANDOM_EVENTS = [
+  // === 赛道突发事件 ===
   {
     title: '⚠️ 安全车出动',
     desc: '前方赛道上有碎片，赛会出动安全车！这是一个进站的好机会。',
@@ -261,7 +262,7 @@ const RANDOM_EVENTS = [
   },
   {
     title: '🚨 黄旗区',
-    desc: '赛道某处出现黄旗， marshal正在清理赛道。你需要减速通过。',
+    desc: '赛道某处出现黄旗，marshal正在清理赛道。你需要减速通过。',
     type: 'yellow_flag',
     options: [
       { label: 'A', text: '严格遵守黄旗 - 安全第一', effect: { consistency: 2, pace: -1 } },
@@ -287,6 +288,170 @@ const RANDOM_EVENTS = [
       { label: 'B', text: '全力推进 - 保持压力', effect: { pace: 2, risk: 1 } },
     ],
   },
+  // === 车队内斗事件 ===
+  {
+    title: '😤 队友无视指令',
+    desc: '你的队友公然无视车队指令，强行超越了你！车队无线电一片混乱。',
+    type: 'team_drama',
+    options: [
+      { label: 'A', text: '立刻反超回去 - 绝不退让！', effect: { attack: 4, pace: 2, teamTrust: -8, risk: 3 } },
+      { label: 'B', text: '向车队抱怨 - 让他们处理', effect: { teamTrust: 3, raceIQ: 1, pace: -2 } },
+      { label: 'C', text: '专注于自己的节奏 - 用成绩说话', effect: { consistency: 3, raceIQ: 2, pace: -1 } },
+    ],
+  },
+  {
+    title: '🤬 车队策略分歧',
+    desc: '车队领队和你的赛道工程师在进站策略上产生了严重分歧，你被夹在中间。',
+    type: 'team_drama',
+    options: [
+      { label: 'A', text: '支持工程师 - 他更了解赛道情况', effect: { raceIQ: 3, teamTrust: -3 } },
+      { label: 'B', text: '听从领队 - 车队大局为重', effect: { teamTrust: 4, raceIQ: -1 } },
+      { label: 'C', text: '自己做决定 - 谁都不听', effect: { pace: 2, raceIQ: 1, teamTrust: -5, risk: 2 } },
+    ],
+  },
+  {
+    title: '🔴 车队威胁降级',
+    desc: '车队老板通过无线电警告你："如果再拿不出成绩，下一场就换人！"',
+    type: 'team_drama',
+    options: [
+      { label: 'A', text: '化压力为动力 - 全力冲刺！', effect: { pace: 5, attack: 3, risk: 4, consistency: -2 } },
+      { label: 'B', text: '稳扎稳打 - 用完赛证明自己', effect: { consistency: 4, raceIQ: 2, pace: -1 } },
+      { label: 'C', text: '怒回无线电 - 给我一辆能跑的车再说！', effect: { teamTrust: -10, mediaRep: 2, fanPop: 5, pace: 1 } },
+    ],
+  },
+  {
+    title: '👥 队友暗讽',
+    desc: '赛后采访中，你的队友暗示"某些人"占了太多车队资源，围场议论纷纷。',
+    type: 'team_drama',
+    options: [
+      { label: 'A', text: '公开回怼 - 在社交媒体上反击', effect: { fanPop: 4, mediaRep: -3, driverRep: -2, teamTrust: -5 } },
+      { label: 'B', text: '用成绩回应 - 下一场碾压他', effect: { pace: 3, attack: 2, raceIQ: 1 } },
+      { label: 'C', text: '私下沟通 - 解决矛盾', effect: { teamTrust: 5, raceIQ: 2, driverRep: 3 } },
+    ],
+  },
+  // === 媒体事件 ===
+  {
+    title: '📺 媒体恶意剪辑',
+    desc: '一段你赛后在无线电中的抱怨被媒体恶意剪辑传播，车迷议论纷纷。',
+    type: 'media',
+    options: [
+      { label: 'A', text: '发布声明澄清 - 公关处理', effect: { mediaRep: 4, fanPop: 1, raceIQ: 1 } },
+      { label: 'B', text: '怒斥媒体 - 不装了！', effect: { mediaRep: -5, fanPop: 6, driverRep: 3, pace: 2 } },
+      { label: 'C', text: '无视争议 - 专注比赛', effect: { consistency: 3, raceIQ: 2, mediaRep: -1 } },
+    ],
+  },
+  {
+    title: '📸 狗仔偷拍',
+    desc: '你昨晚在夜店的照片被曝光，车队赞助商对此表示不满。',
+    type: 'media',
+    options: [
+      { label: 'A', text: '道歉并承诺专注比赛', effect: { mediaRep: 3, teamTrust: 3, fanPop: -2 } },
+      { label: 'B', text: '无所谓 - 我的私生活我做主', effect: { fanPop: 5, mediaRep: -4, teamTrust: -4, sponsorRep: -3 } },
+      { label: 'C', text: '邀请媒体来训练基地 - 展示职业态度', effect: { mediaRep: 5, fanPop: 3, consistency: 1 } },
+    ],
+  },
+  {
+    title: '🎙️ 名嘴批评',
+    desc: '知名F1评论员在直播中公开批评你的驾驶风格"过于鲁莽"，引发热议。',
+    type: 'media',
+    options: [
+      { label: 'A', text: '虚心接受 - 下场证明自己', effect: { consistency: 3, raceIQ: 2, mediaRep: 3 } },
+      { label: 'B', text: '反唇相讥 - 他懂什么赛车？', effect: { mediaRep: -3, fanPop: 4, driverRep: 2, attack: 2 } },
+      { label: 'C', text: '邀请他坐车队墙 - 看看真实数据', effect: { mediaRep: 5, raceIQ: 1, teamTrust: 2 } },
+    ],
+  },
+  {
+    title: '📱 社交媒体风暴',
+    desc: '你在社交媒体上的一条动态引发巨大争议，24小时内登上热搜。',
+    type: 'media',
+    options: [
+      { label: 'A', text: '删除动态并道歉 - 危机公关', effect: { mediaRep: 3, fanPop: -3, teamTrust: 2 } },
+      { label: 'B', text: '坚持立场 - 不删除', effect: { fanPop: 7, mediaRep: -4, driverRep: 3, sponsorRep: -2 } },
+      { label: 'C', text: '发长文解释来龙去脉', effect: { mediaRep: 4, fanPop: 2, raceIQ: 1 } },
+    ],
+  },
+  // === 赛道戏剧性事件 ===
+  {
+    title: '💥 前方连环碰撞',
+    desc: '前方多车连环碰撞！赛道上到处都是碎片，红旗中断比赛！',
+    type: 'chaos',
+    options: [
+      { label: 'A', text: '利用中断时间调整策略 - 重整旗鼓', effect: { raceIQ: 4, consistency: 2 } },
+      { label: 'B', text: '重启后全力进攻 - 趁乱超车', effect: { pace: 4, attack: 3, risk: 4 } },
+      { label: 'C', text: '保守起步重启 - 避免二次事故', effect: { consistency: 4, defend: 2, pace: -2 } },
+    ],
+  },
+  {
+    title: '🌧️ 突降暴雨',
+    desc: '天气突变！大雨倾盆而下，赛道瞬间变成溜冰场，多辆赛车打滑！',
+    type: 'chaos',
+    options: [
+      { label: 'A', text: '立即进站换全雨胎 - 雨战大师时间！', effect: { wet: 5, pace: 3, raceIQ: 2 } },
+      { label: 'B', text: '继续用半雨胎 - 赌雨不会持续', effect: { pace: -2, risk: 5, wet: 2 } },
+      { label: 'C', text: '减速保守 - 先活下来再说', effect: { consistency: 3, wet: 1, pace: -3 } },
+    ],
+  },
+  {
+    title: '🔧 技术故障',
+    desc: '你的方向盘按钮突然失灵！DRS无法开启，变速箱也出现异常。',
+    type: 'chaos',
+    options: [
+      { label: 'A', text: '手动操作绕过故障 - 硬核驾驶', effect: { raceIQ: 4, pace: -1, consistency: 2 } },
+      { label: 'B', text: '进站维修 - 损失时间但修好', effect: { pace: -4, consistency: 3, raceIQ: 1 } },
+      { label: 'C', text: '无视故障继续跑 - 纯靠技术！', effect: { pace: 2, risk: 4, attack: 3 } },
+    ],
+  },
+  {
+    title: '🃏 虚晃一枪',
+    desc: '后车在你的镜子里疯狂闪灯，看起来要超车，但你不确定是不是假动作。',
+    type: 'chaos',
+    options: [
+      { label: 'A', text: '防守内线 - 不给他机会', effect: { defend: 4, raceIQ: 2, pace: -1 } },
+      { label: 'B', text: '放他过去 - 然后用尾流反超', effect: { raceIQ: 4, attack: 3, pace: 1 } },
+      { label: 'C', text: '忽左忽右 - 迷惑对手', effect: { defend: 2, raceIQ: 1, risk: 3 } },
+    ],
+  },
+  {
+    title: '🏁 最后圈混乱',
+    desc: '最后一圈！前车突然失误，你看到了胜利的曙光，但后车也咬得很紧！',
+    type: 'chaos',
+    options: [
+      { label: 'A', text: '全力进攻前车 - 豪赌最后弯道！', effect: { attack: 6, pace: 4, risk: 5, consistency: -3 } },
+      { label: 'B', text: '防守后车 - 保住当前位置', effect: { defend: 5, consistency: 3, pace: -1 } },
+      { label: 'C', text: '等待机会 - 如果前车失误就超', effect: { raceIQ: 4, consistency: 2, pace: 1 } },
+    ],
+  },
+  // === 围场八卦 ===
+  {
+    title: '🤫 转会传闻',
+    desc: '围场盛传你正在与另一支车队秘密谈判转会，你的队友和车队都坐不住了。',
+    type: 'paddock',
+    options: [
+      { label: 'A', text: '公开否认 - 专注当前赛季', effect: { teamTrust: 5, mediaRep: 2, consistency: 2 } },
+      { label: 'B', text: '暧昧回应 - 让传闻继续发酵', effect: { mediaRep: -2, fanPop: 4, teamTrust: -6, pace: 2 } },
+      { label: 'C', text: '要求经纪人处理 - 不让分心', effect: { raceIQ: 3, consistency: 2, mediaRep: 1 } },
+    ],
+  },
+  {
+    title: '👴 传奇点评',
+    desc: '一位F1传奇车手在采访中点名评价你："他有天赋，但还需要磨练。"',
+    type: 'paddock',
+    options: [
+      { label: 'A', text: '虚心接受指点 - 传奇说的对', effect: { raceIQ: 4, consistency: 2, driverRep: 4 } },
+      { label: 'B', text: '不甘示弱 - 下场用冠军回应', effect: { pace: 4, attack: 3, driverRep: 2, risk: 2 } },
+      { label: 'C', text: '邀请他做导师 - 虚心求教', effect: { raceIQ: 5, driverRep: 6, mediaRep: 3 } },
+    ],
+  },
+  {
+    title: '🏎️ 赞助商施压',
+    desc: '车队的主要赞助商直接向老板施压，要求你必须在下一站登上领奖台。',
+    type: 'paddock',
+    options: [
+      { label: 'A', text: '接受挑战 - 压力就是动力', effect: { pace: 4, attack: 2, risk: 3, consistency: -1 } },
+      { label: 'B', text: '与管理层沟通 - 设定合理目标', effect: { teamTrust: 3, raceIQ: 2, mediaRep: 2 } },
+      { label: 'C', text: '在采访中回击赞助商 - 赛车不是做生意', effect: { fanPop: 6, mediaRep: -3, sponsorRep: -5, teamTrust: -4 } },
+    ],
+  },
 ];
 
 // ============ RACE DECISIONS ============
@@ -308,7 +473,7 @@ function getRaceDecisions(raceIdx, state) {
     ],
   });
 
-  // Segment 2: Weather-dependent OR random event (50% chance)
+  // Segment 2: Weather-dependent OR random event (70% chance)
   if (weather.wetMod > 0.2) {
     allDecisions.push({
       segment: 2,
@@ -320,8 +485,8 @@ function getRaceDecisions(raceIdx, state) {
         { label: 'C', text: '等一圈再看情况', effect: { pace: 0, risk: 1 } },
       ],
     });
-  } else if (Math.random() < 0.5) {
-    // 50% chance to get a random event instead of the standard overtake decision
+  } else if (Math.random() < 0.7) {
+    // 70% chance to get a random event instead of the standard overtake decision
     const randomEvent = RANDOM_EVENTS[Math.floor(Math.random() * RANDOM_EVENTS.length)];
     allDecisions.push({
       segment: 2,
@@ -329,6 +494,7 @@ function getRaceDecisions(raceIdx, state) {
       desc: randomEvent.desc,
       options: randomEvent.options,
       isRandomEvent: true,
+      eventType: randomEvent.type,
     });
   } else {
     allDecisions.push({
@@ -355,16 +521,19 @@ function getRaceDecisions(raceIdx, state) {
     ],
   });
 
-  // Segment 4: Late race decision - randomly choose between final sprint or another random event
-  if (Math.random() < 0.3) {
-    // 30% chance for a second random event
-    const randomEvent = RANDOM_EVENTS[Math.floor(Math.random() * RANDOM_EVENTS.length)];
+  // Segment 4: Late race decision - 60% chance for a second random event (different from segment 2)
+  const usedEventTypes = allDecisions.filter(d => d.isRandomEvent).map(d => d.eventType);
+  const availableEvents = RANDOM_EVENTS.filter(e => !usedEventTypes.includes(e.type) || RANDOM_EVENTS.length <= usedEventTypes.length);
+  if (Math.random() < 0.6 && availableEvents.length > 0) {
+    // 60% chance for a second random event
+    const randomEvent = availableEvents[Math.floor(Math.random() * availableEvents.length)];
     allDecisions.push({
       segment: 4,
       title: randomEvent.title,
       desc: randomEvent.desc,
       options: randomEvent.options,
       isRandomEvent: true,
+      eventType: randomEvent.type,
     });
   } else {
     allDecisions.push({
@@ -809,37 +978,130 @@ function generateContractOffers() {
     ? gameState.raceResults.reduce((sum, r) => sum + (r.dnf ? 20 : r.position), 0) / gameState.raceResults.length
     : 10;
 
-  const offers = [];
-  const numOffers = Math.max(2, Math.min(5, Math.round(6 - avgPos / 5)));
+  // Calculate player's market value
+  const wins = gameState.raceResults.filter(r => !r.dnf && r.position === 1).length;
+  const podiums = gameState.raceResults.filter(r => !r.dnf && r.position <= 3).length;
+  const playerStanding = getDriverStandings().find(d => d.isPlayer);
+  const champPos = playerStanding ? playerStanding.position : 10;
+  const reputation = (gameState.reputation.teamTrust + gameState.reputation.mediaRelation + gameState.reputation.fanPopularity + gameState.reputation.driverRespect) / 4;
 
-  // Current team always offers
+  // Market value score: higher = more attractive to top teams
+  const marketScore = Math.max(0, 100 - avgPos * 3 + wins * 5 + podiums * 2 + (reputation - 50) * 0.3);
+
+  const offers = [];
+
+  // === Current team offer ===
   const currentTeam = TEAMS[gameState.teamIdx];
-  const baseSalary = currentTeam.salary[0] + (currentTeam.salary[1] - currentTeam.salary[0]) * (1 - avgPos / 20);
+  const loyaltyBonus = gameState.seasonsAtCurrentTeam * 0.5;
+  const currentBaseSalary = currentTeam.salary[0] + (currentTeam.salary[1] - currentTeam.salary[0]) * (1 - avgPos / 20);
+  const currentSalary = Math.round((currentBaseSalary * (0.9 + Math.random() * 0.3) + loyaltyBonus) * 10) / 10;
+
   offers.push({
     team: currentTeam,
-    salary: Math.round(baseSalary * (0.9 + Math.random() * 0.3) * 10) / 10,
-    years: Math.random() > 0.5 ? 2 : 1,
+    salary: currentSalary,
+    years: 1 + Math.floor(Math.random() * 3),
     isCurrent: true,
+    interest: Math.min(100, 60 + marketScore * 0.3 + loyaltyBonus * 2),
+    signingBonus: Math.round(currentSalary * 0.3 * 10) / 10,
+    expectation: champPos <= 3 ? '争夺世界冠军' : champPos <= 7 ? '稳定得分' : '提升车队排名',
+    expectationPos: champPos <= 3 ? 3 : champPos <= 7 ? 7 : 10,
+    rivalDriver: null,
+    clause: gameState.seasonsAtCurrentTeam >= 3 ? '一号车手条款' : '平等对待条款',
   });
 
-  // Other teams
+  // === Other teams ===
   const eligibleTeams = TEAMS.filter((t, i) => i !== gameState.teamIdx);
-  const shuffled = eligibleTeams.sort(() => Math.random() - 0.5);
 
-  for (let i = 0; i < numOffers - 1 && i < shuffled.length; i++) {
-    const team = shuffled[i];
-    // Better performing teams offer less (player is less proven)
+  // Calculate interest for each team
+  const teamInterests = eligibleTeams.map(team => {
+    const teamIdx = TEAMS.findIndex(t => t.id === team.id);
+    // Top teams only interested if player is performing well
+    let interest = 30;
+    if (team.car >= 90) {
+      // Top teams need strong performance
+      interest = Math.max(0, marketScore - 30 + (champPos <= 3 ? 30 : 0));
+    } else if (team.car >= 80) {
+      // Mid-top teams
+      interest = Math.max(0, marketScore - 10 + (champPos <= 7 ? 20 : 0));
+    } else if (team.car >= 70) {
+      // Midfield teams - more welcoming
+      interest = Math.max(20, marketScore + 10);
+    } else {
+      // Backmarker teams - always interested
+      interest = Math.max(40, marketScore + 20);
+    }
+
+    // Reputation factor
+    interest += (reputation - 50) * 0.2;
+
+    // Random factor
+    interest += (Math.random() - 0.5) * 20;
+
+    return { team, teamIdx, interest: Math.min(100, Math.max(0, interest)) };
+  });
+
+  // Sort by interest and take top teams
+  teamInterests.sort((a, b) => b.interest - a.interest);
+
+  // Number of offers based on performance (2-5 additional offers)
+  const numAdditionalOffers = Math.max(1, Math.min(4, Math.round(marketScore / 25)));
+
+  for (let i = 0; i < numAdditionalOffers && i < teamInterests.length; i++) {
+    const { team, teamIdx, interest } = teamInterests[i];
+
+    // Only offer if interest is high enough
+    if (interest < 25) continue;
+
     const performanceFactor = Math.max(0.3, 1 - avgPos / 25);
     const teamFactor = team.car / 95;
-    const salary = Math.round((team.salary[0] + (team.salary[1] - team.salary[0]) * performanceFactor * teamFactor) * 10) / 10;
+    const interestFactor = interest / 100;
+    const salary = Math.round((team.salary[0] + (team.salary[1] - team.salary[0]) * performanceFactor * teamFactor * interestFactor) * 10) / 10;
+
+    // Generate a rival driver for the seat
+    const rivals = ['F2新秀', '自由车手', '其他车队车手', '青训车手'];
+    const rivalName = rivals[Math.floor(Math.random() * rivals.length)];
+
+    // Generate expectations based on team strength
+    let expectation, expectationPos;
+    if (team.car >= 90) {
+      expectation = '争夺世界冠军';
+      expectationPos = 3;
+    } else if (team.car >= 80) {
+      expectation = '频繁登上领奖台';
+      expectationPos = 5;
+    } else if (team.car >= 70) {
+      expectation = '稳定进入积分区';
+      expectationPos = 8;
+    } else {
+      expectation = '争取积分完赛';
+      expectationPos = 12;
+    }
+
+    // Generate clauses
+    const clauses = ['平等对待条款', '一号车手条款', '成绩奖金条款', '续约选项条款', '无条款'];
+    const clause = clauses[Math.floor(Math.random() * clauses.length)];
 
     offers.push({
       team,
       salary: Math.max(1, salary),
-      years: 1 + Math.floor(Math.random() * 2),
+      years: 1 + Math.floor(Math.random() * 3),
       isCurrent: false,
+      interest: Math.round(interest),
+      signingBonus: Math.round(Math.max(0, salary * (0.2 + Math.random() * 0.4)) * 10) / 10,
+      expectation,
+      expectationPos,
+      rivalDriver: rivalName,
+      rivalInterest: Math.round(Math.max(10, 80 - interest * 0.5 + Math.random() * 20)),
+      clause,
     });
   }
+
+  // Sort offers: current team first, then by team car performance
+  offers.sort((a, b) => {
+    if (a.isCurrent) return -1;
+    if (b.isCurrent) return 1;
+    return b.team.car - a.team.car;
+  });
 
   return offers;
 }
@@ -2055,47 +2317,103 @@ function showContractOffers() {
   showScreen('contract-screen');
   document.getElementById('contract-screen').innerHTML = `
     <div class="section-header">
-      <h2 class="font-display">💼 合同报价</h2>
+      <h2 class="font-display">💼 合同谈判</h2>
     </div>
-    <p class="text-muted" style="margin-bottom:20px;">选择一份合同，开始新的赛季</p>
+    <div class="card" style="padding:14px;margin-bottom:16px;">
+      <div style="font-size:0.85rem;color:var(--text-secondary);line-height:1.6;">
+        📋 赛季结束，以下车队对你表示了兴趣。点击卡片选择合同，查看详情后确认签约。<br>
+        ⚠️ 注意：其他车手也在竞争席位，如果犹豫太久可能被抢走机会。
+      </div>
+    </div>
 
     <div id="contract-list">
-      ${offers.map((offer, i) => `
-        <div class="contract-card" data-idx="${i}" onclick="selectContract(${i})">
-          <div class="contract-team">
-            <span class="team-badge ${offer.team.css}" style="margin-right:8px;">${offer.team.short}</span>
-            ${offer.isCurrent ? '<span class="badge badge-green">续约</span>' : '<span class="badge badge-blue">新报价</span>'}
+      ${offers.map((offer, i) => {
+        const interestColor = offer.interest >= 70 ? 'var(--green)' : offer.interest >= 40 ? 'var(--yellow)' : 'var(--f1-red)';
+        const interestLabel = offer.interest >= 70 ? '非常感兴趣' : offer.interest >= 50 ? '有兴趣' : offer.interest >= 30 ? '一般' : '勉强考虑';
+        return `
+          <div class="contract-card" data-idx="${i}">
+            <div class="contract-team">
+              <span class="team-badge ${offer.team.css}" style="margin-right:8px;">${offer.team.short}</span>
+              ${offer.isCurrent ? '<span class="badge badge-green">续约</span>' : '<span class="badge badge-blue">新报价</span>'}
+              <span style="font-size:0.75rem;color:${interestColor};font-weight:600;margin-left:auto;">${interestLabel} ${offer.interest}%</span>
+            </div>
+            <div class="contract-details">
+              <div class="contract-detail">💰 年薪: <span class="value">$${offer.salary}M</span></div>
+              <div class="contract-detail">📅 年限: <span class="value">${offer.years}年</span></div>
+              <div class="contract-detail">🏎️ 赛车性能: <span class="value">${offer.team.car}</span></div>
+              <div class="contract-detail">🎁 签字费: <span class="value">$${offer.signingBonus}M</span></div>
+            </div>
+            <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:0.8rem;color:var(--text-secondary);">
+              <div>🎯 车队期望: <span style="color:var(--text-primary);">${offer.expectation}</span></div>
+              <div>📝 合同条款: <span style="color:var(--text-primary);">${offer.clause}</span></div>
+              ${offer.rivalDriver ? `<div>⚔️ 竞争对手: <span style="color:var(--f1-red);">${offer.rivalDriver}</span> (对此席位兴趣 ${offer.rivalInterest}%)</div>` : '<div>⚔️ 竞争对手: <span style="color:var(--green);">无</span></div>'}
+            </div>
           </div>
-          <div class="contract-details">
-            <div class="contract-detail">💰 年薪: <span class="value">$${offer.salary}M</span></div>
-            <div class="contract-detail">📅 年限: <span class="value">${offer.years}年</span></div>
-            <div class="contract-detail">🏎️ 赛车性能: <span class="value">${offer.team.car}</span></div>
-          </div>
-        </div>
-      `).join('')}
+        `;
+      }).join('')}
     </div>
 
-    <button class="btn btn-primary btn-lg" id="accept-contract-btn" disabled onclick="acceptContractOffer()" style="margin-top:16px;">
-      接受合同
+    <div id="contract-detail-panel" style="display:none;margin-top:16px;"></div>
+
+    <button class="btn btn-primary btn-lg" id="accept-contract-btn" disabled style="margin-top:16px;">
+      签约并开始新赛季
     </button>
   `;
+
+  // Use event listeners instead of inline onclick to fix selection bug
+  const cards = document.querySelectorAll('.contract-card');
+  cards.forEach(card => {
+    card.addEventListener('click', function() {
+      const idx = parseInt(this.dataset.idx);
+      selectContract(idx);
+    });
+  });
+
+  document.getElementById('accept-contract-btn').addEventListener('click', function() {
+    acceptContractOffer();
+  });
 }
 
 function selectContract(idx) {
-  document.querySelectorAll('.contract-card').forEach(c => c.classList.remove('selected'));
-  document.querySelectorAll('.contract-card')[idx].classList.add('selected');
+  const cards = document.querySelectorAll('.contract-card');
+  cards.forEach(c => c.classList.remove('selected'));
+  if (cards[idx]) {
+    cards[idx].classList.add('selected');
+  }
   raceState.selectedOffer = idx;
+
+  // Show detail panel
+  const offer = raceState.contractOffers[idx];
+  const detailPanel = document.getElementById('contract-detail-panel');
+  detailPanel.style.display = 'block';
+  detailPanel.innerHTML = `
+    <div class="card" style="border-color:var(--gold);box-shadow:0 0 20px rgba(255,215,0,0.1);">
+      <h3 style="margin-bottom:12px;font-size:0.95rem;">📋 合同详情 — ${offer.team.short}</h3>
+      <div style="font-size:0.85rem;line-height:1.8;color:var(--text-secondary);">
+        <div>💰 <strong style="color:var(--text-primary);">年薪 $${offer.salary}M/年</strong> × ${offer.years}年 = 总价值 $${(offer.salary * offer.years).toFixed(1)}M</div>
+        <div>🎁 签字费: <strong style="color:var(--green);">$${offer.signingBonus}M</strong>（签约即得）</div>
+        <div>🎯 赛季目标: <strong style="color:var(--text-primary);">${offer.expectation}</strong>（年终排名需进入P${offer.expectationPos}以内）</div>
+        <div>📝 合同条款: <strong style="color:var(--text-primary);">${offer.clause}</strong></div>
+        ${offer.rivalDriver ? `<div>⚠️ <strong style="color:var(--f1-red);">${offer.rivalDriver}</strong>也在竞争这个席位，对方兴趣度 ${offer.rivalInterest}%</div>` : '<div>✅ <strong style="color:var(--green);">无竞争对手</strong>，车队专门为你预留席位</div>'}
+      </div>
+    </div>
+  `;
+
+  // Scroll to detail
+  detailPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
   document.getElementById('accept-contract-btn').disabled = false;
 }
 
 function acceptContractOffer() {
+  if (raceState.selectedOffer === null || raceState.selectedOffer === undefined) return;
   const offer = raceState.contractOffers[raceState.selectedOffer];
   acceptContract(offer);
   startNewSeason();
   raceState = null;
   renderHub();
   saveGame();
-  showToast(`${gameState.season} 赛季开始！`, 'success');
+  showToast(`已签约 ${offer.team.short}！${gameState.season} 赛季开始！`, 'success');
 }
 
 // ============ LOAD AND RESUME ============
