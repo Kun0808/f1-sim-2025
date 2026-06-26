@@ -2441,8 +2441,14 @@ function train(statKey) {
   if (gameState.stats[statKey] >= 100) return false;
 
   const currentVal = gameState.stats[statKey];
-  const gain = 4 + Math.floor(Math.random() * 4); // 4-7
-  const actualGain = Math.min(gain, 100 - currentVal); // Don't exceed 100
+  // Diminishing returns: higher stats grow slower
+  let baseGain;
+  if (currentVal < 70) baseGain = 5 + Math.floor(Math.random() * 3);      // 5-7
+  else if (currentVal < 85) baseGain = 3 + Math.floor(Math.random() * 3); // 3-5
+  else if (currentVal < 95) baseGain = 2 + Math.floor(Math.random() * 2); // 2-3
+  else baseGain = 1;                                                       // 1 at 95+
+
+  const actualGain = Math.min(baseGain, 100 - currentVal);
   const otherKeys = Object.keys(gameState.stats).filter(k => k !== statKey);
   const lossKey = otherKeys[Math.floor(Math.random() * otherKeys.length)];
 
@@ -2450,7 +2456,57 @@ function train(statKey) {
   gameState.stats[lossKey] = clamp(gameState.stats[lossKey] - 1, 50, 100);
   gameState.trainedThisWeek = true;
 
+  // AI drivers also train - maintain competitiveness
+  aiDriverTraining();
+
+  // Track total training sessions for milestone achievements
+  gameState.totalTrainings = (gameState.totalTrainings || 0) + 1;
+
   return { gained: statKey, gain: actualGain, lost: lossKey };
+}
+
+// AI drivers train when player trains - keeps competition alive
+function aiDriverTraining() {
+  const player = getPlayer();
+  const playerAvgStat = Object.values(gameState.stats).reduce((a, b) => a + b, 0) / Object.keys(gameState.stats).length;
+
+  gameState.drivers.forEach(d => {
+    if (d.isPlayer) return;
+
+    // Each AI driver has a chance to "train" - influenced by team budget and driver age
+    const teamCar = getCarForTeam(d.teamIdx);
+    const driverAvg = Object.values(d.stats).reduce((a, b) => a + b, 0) / Object.values(d.stats).length;
+
+    // Better teams train more effectively; drivers below player's level train harder to catch up
+    let trainChance = 0.35; // Base 35% chance
+    if (driverAvg < playerAvgStat - 5) trainChance += 0.20; // Lagging behind: +20%
+    if (teamCar >= 85) trainChance += 0.10; // Top team: +10%
+    if (teamCar <= 70) trainChance -= 0.10; // Backmarker: -10%
+
+    if (Math.random() < trainChance) {
+      // Pick a random stat to improve
+      const statKeys = Object.keys(d.stats).filter(k => k !== 'skill' && d.stats[k] < 99);
+      if (statKeys.length > 0) {
+        const trainKey = statKeys[Math.floor(Math.random() * statKeys.length)];
+        let aiGain;
+        const currentStat = d.stats[trainKey];
+
+        // AI growth is slightly less than player but still meaningful
+        if (currentStat < 75) aiGain = 1 + Math.floor(Math.random() * 2); // 1-2
+        else if (currentStat < 90) aiGain = 1;                             // 1
+        else aiGain = Math.random() < 0.5 ? 1 : 0;                        // 50% chance of +1
+
+        d.stats[trainKey] = clamp(d.stats[trainKey] + aiGain, 55, 99);
+
+        // Small chance of a stat declining (age/injury)
+        if (Math.random() < 0.15) {
+          const declineKeys = Object.keys(d.stats).filter(k => k !== 'skill' && k !== trainKey);
+          const declineKey = declineKeys[Math.floor(Math.random() * declineKeys.length)];
+          d.stats[declineKey] = clamp(d.stats[declineKey] - 1, 55, 99);
+        }
+      }
+    }
+  });
 }
 
 function generateContractOffers() {
@@ -2684,13 +2740,19 @@ function startNewSeason() {
   });
   gameState.teamStandings.forEach(ts => ts.points = 0);
 
-  // Age effect - slight decline for older drivers, growth for younger
+  // Age effect - performance-based growth for AI drivers
   gameState.drivers.forEach(d => {
     if (!d.isPlayer) {
-      const growth = (Math.random() - 0.4) * 2;
+      // Drivers who performed well grow more; poor performers decline
+      const avgPos = d.positions.length > 0
+        ? d.positions.reduce((a, b) => a + (b || 20), 0) / d.positions.length
+        : 15;
+      const performanceBonus = avgPos <= 5 ? 1.5 : avgPos <= 10 ? 0.5 : -0.5;
+
       for (const key in d.stats) {
         if (key !== 'skill') {
-          d.stats[key] = clamp((d.stats[key] || 75) + growth, 55, 98);
+          const growth = (Math.random() - 0.35) * 2 + performanceBonus * 0.5;
+          d.stats[key] = clamp((d.stats[key] || 75) + growth, 55, 99);
         }
       }
     }
@@ -2817,15 +2879,16 @@ function showScreen(screenId) {
   }
 }
 
-function showToast(message, type = 'info') {
+function showToast(message, type = 'info', duration = 3000) {
   const existing = document.querySelector('.toast');
   if (existing) existing.remove();
 
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
+  toast.style.whiteSpace = 'pre-line';
   toast.textContent = message;
   document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 3000);
+  setTimeout(() => toast.remove(), duration);
 }
 
 // ============ RENDER FUNCTIONS ============
@@ -3851,6 +3914,21 @@ function finishQuickSim(simResults) {
 function renderTraining() {
   showScreen('training-screen');
   const trained = gameState.trainedThisWeek;
+  const player = getPlayer();
+  const playerAvg = Object.values(gameState.stats).reduce((a, b) => a + b, 0) / Object.keys(gameState.stats).length;
+
+  // Get top 5 AI drivers by average stat for comparison
+  const aiAvgs = gameState.drivers
+    .filter(d => !d.isPlayer)
+    .map(d => ({
+      name: d.name,
+      avg: Object.values(d.stats).reduce((a, b) => a + b, 0) / Object.values(d.stats).length,
+      team: TEAMS[d.teamIdx],
+    }))
+    .sort((a, b) => b.avg - a.avg)
+    .slice(0, 5);
+
+  const totalTrainings = gameState.totalTrainings || 0;
 
   document.getElementById('training-screen').innerHTML = `
     <button class="back-btn" onclick="renderHub()">← 返回主页</button>
@@ -3858,26 +3936,71 @@ function renderTraining() {
       <h2 class="font-display">🏋️ 训练中心</h2>
     </div>
 
+    <div class="card" style="padding:14px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:0.8rem;color:var(--text-muted);">你的综合评分</div>
+          <div style="font-family:'Orbitron';font-size:1.5rem;font-weight:800;color:${playerAvg >= 90 ? 'var(--gold)' : playerAvg >= 80 ? 'var(--green)' : 'var(--f1-red)'};">${playerAvg.toFixed(1)}</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:0.8rem;color:var(--text-muted);">累计训练</div>
+          <div style="font-family:'Orbitron';font-size:1.5rem;font-weight:800;color:var(--blue);">${totalTrainings}</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:0.8rem;color:var(--text-muted);">围场最高</div>
+          <div style="font-family:'Orbitron';font-size:1.5rem;font-weight:800;color:var(--gold);">${aiAvgs[0] ? aiAvgs[0].avg.toFixed(1) : '-'}</div>
+        </div>
+      </div>
+    </div>
+
+    ${playerAvg >= 90 ? `
+      <div class="card" style="padding:12px;margin-bottom:12px;background:rgba(234,179,8,0.1);border-color:var(--gold);">
+        <div style="font-size:0.85rem;color:var(--gold);">✨ 你的综合评分已超过90！你已是围场中的顶级车手。</div>
+      </div>
+    ` : ''}
+
+    <div class="card" style="padding:12px;margin-bottom:12px;">
+      <h3 style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:8px;">🔥 围场竞争对手动态</h3>
+      <div style="display:grid;gap:4px;">
+        ${aiAvgs.map((d, i) => `
+          <div style="display:flex;align-items:center;gap:8px;font-size:0.8rem;">
+            <span style="color:var(--text-muted);width:20px;">${i + 1}.</span>
+            <span class="team-badge ${d.team.css}" style="font-size:0.65rem;padding:1px 4px;">${d.team.short}</span>
+            <span style="flex:1;">${d.name}</span>
+            <span style="color:${d.avg > playerAvg ? 'var(--f1-red)' : 'var(--green)'};font-weight:600;">${d.avg.toFixed(1)}</span>
+            ${d.avg > playerAvg ? '<span style="color:var(--f1-red);font-size:0.7rem;">↑领先</span>' : '<span style="color:var(--green);font-size:0.7rem;">↓你领先</span>'}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
     ${trained ? `
       <div class="card" style="text-align:center;padding:40px;">
         <div style="font-size:3rem;margin-bottom:12px;">✅</div>
         <h3>本周训练已完成</h3>
-        <p class="text-muted" style="margin-top:8px;">每站比赛前只能训练一次</p>
+        <p class="text-muted" style="margin-top:8px;">每站比赛前只能训练一次，其他车手也在不断进步</p>
       </div>
     ` : `
-      <p class="text-muted" style="margin-bottom:16px;">选择训练重点。提升一项属性的同时，另一项会略微下降。</p>
+      <p class="text-muted" style="margin-bottom:12px;">选择训练重点。高属性区域收益递减，低属性区域提升更快。每次训练其他车手也有概率同步提升。</p>
       <div id="training-list">
         ${Object.keys(gameState.stats).map(key => {
           const val = gameState.stats[key];
           const isMax = val >= 100;
+          let gainRange;
+          if (val < 70) gainRange = '+5~7';
+          else if (val < 85) gainRange = '+3~5';
+          else if (val < 95) gainRange = '+2~3';
+          else gainRange = '+1';
+
           return `
           <div class="training-option" data-stat="${key}" ${isMax ? 'style="opacity:0.5;cursor:not-allowed;"' : `onclick="selectTraining('${key}')"`}>
             <div class="train-name">${STAT_NAMES[key]}</div>
             <div class="train-effect">
               当前: <strong style="color:${STAT_COLORS[key]}">${isMax ? '<span style="color:var(--gold);">MAX</span>' : val}</strong>
               ${isMax ? '<span style="color:var(--gold);font-size:0.75rem;"> (已满级)</span>' : `
-                → 预计提升至 <strong style="color:var(--green)">${Math.min(val + 4, 100)}~${Math.min(val + 7, 100)}</strong>
+                → 预计 <strong style="color:var(--green)">${gainRange}</strong>
                 ${val >= 95 ? '<span style="color:var(--gold);font-size:0.75rem;"> (接近上限)</span>' : ''}
+                ${val < 70 ? '<span style="color:var(--blue);font-size:0.75rem;"> (快速提升区)</span>' : ''}
                 · 随机另一属性 -1
               `}
             </div>
@@ -3890,9 +4013,33 @@ function renderTraining() {
 }
 
 function selectTraining(statKey) {
+  const beforeStats = {};
+  gameState.drivers.forEach(d => {
+    if (!d.isPlayer) {
+      beforeStats[d.name] = Object.values(d.stats).reduce((a, b) => a + b, 0) / Object.values(d.stats).length;
+    }
+  });
+
   const result = train(statKey);
   if (result) {
-    showToast(`${STAT_NAMES[result.gained]} +${result.gain}，${STAT_NAMES[result.lost]} -1`, 'success');
+    // Check which AI drivers improved
+    const aiImprovements = [];
+    gameState.drivers.forEach(d => {
+      if (!d.isPlayer) {
+        const afterAvg = Object.values(d.stats).reduce((a, b) => a + b, 0) / Object.values(d.stats).length;
+        const beforeAvg = beforeStats[d.name];
+        if (afterAvg > beforeAvg + 0.1) {
+          aiImprovements.push(d.name);
+        }
+      }
+    });
+
+    let msg = `${STAT_NAMES[result.gained]} +${result.gain}，${STAT_NAMES[result.lost]} -1`;
+    if (aiImprovements.length > 0) {
+      msg += `
+📊 ${aiImprovements.length}位车手也在进步: ${aiImprovements.slice(0, 3).join(', ')}${aiImprovements.length > 3 ? '...' : ''}`;
+    }
+    showToast(msg, 'success', 4000);
     renderTraining();
     saveGame();
   }
