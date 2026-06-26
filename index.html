@@ -1161,6 +1161,7 @@ const NEWS_TEMPLATES = [
 // ============ RANDOM RACE EVENTS ============
 
 const RANDOM_EVENTS = [
+  // === 赛道突发事件 ===
   {
     title: '⚠️ 安全车出动',
     desc: '前方赛道上有碎片，赛会出动安全车！这是一个进站的好机会。',
@@ -1191,7 +1192,7 @@ const RANDOM_EVENTS = [
   },
   {
     title: '🚨 黄旗区',
-    desc: '赛道某处出现黄旗， marshal正在清理赛道。你需要减速通过。',
+    desc: '赛道某处出现黄旗，marshal正在清理赛道。你需要减速通过。',
     type: 'yellow_flag',
     options: [
       { label: 'A', text: '严格遵守黄旗 - 安全第一', effect: { consistency: 2, pace: -1 } },
@@ -1217,6 +1218,170 @@ const RANDOM_EVENTS = [
       { label: 'B', text: '全力推进 - 保持压力', effect: { pace: 2, risk: 1 } },
     ],
   },
+  // === 车队内斗事件 ===
+  {
+    title: '😤 队友无视指令',
+    desc: '你的队友公然无视车队指令，强行超越了你！车队无线电一片混乱。',
+    type: 'team_drama',
+    options: [
+      { label: 'A', text: '立刻反超回去 - 绝不退让！', effect: { attack: 4, pace: 2, teamTrust: -8, risk: 3 } },
+      { label: 'B', text: '向车队抱怨 - 让他们处理', effect: { teamTrust: 3, raceIQ: 1, pace: -2 } },
+      { label: 'C', text: '专注于自己的节奏 - 用成绩说话', effect: { consistency: 3, raceIQ: 2, pace: -1 } },
+    ],
+  },
+  {
+    title: '🤬 车队策略分歧',
+    desc: '车队领队和你的赛道工程师在进站策略上产生了严重分歧，你被夹在中间。',
+    type: 'team_drama',
+    options: [
+      { label: 'A', text: '支持工程师 - 他更了解赛道情况', effect: { raceIQ: 3, teamTrust: -3 } },
+      { label: 'B', text: '听从领队 - 车队大局为重', effect: { teamTrust: 4, raceIQ: -1 } },
+      { label: 'C', text: '自己做决定 - 谁都不听', effect: { pace: 2, raceIQ: 1, teamTrust: -5, risk: 2 } },
+    ],
+  },
+  {
+    title: '🔴 车队威胁降级',
+    desc: '车队老板通过无线电警告你："如果再拿不出成绩，下一场就换人！"',
+    type: 'team_drama',
+    options: [
+      { label: 'A', text: '化压力为动力 - 全力冲刺！', effect: { pace: 5, attack: 3, risk: 4, consistency: -2 } },
+      { label: 'B', text: '稳扎稳打 - 用完赛证明自己', effect: { consistency: 4, raceIQ: 2, pace: -1 } },
+      { label: 'C', text: '怒回无线电 - 给我一辆能跑的车再说！', effect: { teamTrust: -10, mediaRep: 2, fanPop: 5, pace: 1 } },
+    ],
+  },
+  {
+    title: '👥 队友暗讽',
+    desc: '赛后采访中，你的队友暗示"某些人"占了太多车队资源，围场议论纷纷。',
+    type: 'team_drama',
+    options: [
+      { label: 'A', text: '公开回怼 - 在社交媒体上反击', effect: { fanPop: 4, mediaRep: -3, driverRep: -2, teamTrust: -5 } },
+      { label: 'B', text: '用成绩回应 - 下一场碾压他', effect: { pace: 3, attack: 2, raceIQ: 1 } },
+      { label: 'C', text: '私下沟通 - 解决矛盾', effect: { teamTrust: 5, raceIQ: 2, driverRep: 3 } },
+    ],
+  },
+  // === 媒体事件 ===
+  {
+    title: '📺 媒体恶意剪辑',
+    desc: '一段你赛后在无线电中的抱怨被媒体恶意剪辑传播，车迷议论纷纷。',
+    type: 'media',
+    options: [
+      { label: 'A', text: '发布声明澄清 - 公关处理', effect: { mediaRep: 4, fanPop: 1, raceIQ: 1 } },
+      { label: 'B', text: '怒斥媒体 - 不装了！', effect: { mediaRep: -5, fanPop: 6, driverRep: 3, pace: 2 } },
+      { label: 'C', text: '无视争议 - 专注比赛', effect: { consistency: 3, raceIQ: 2, mediaRep: -1 } },
+    ],
+  },
+  {
+    title: '📸 狗仔偷拍',
+    desc: '你昨晚在夜店的照片被曝光，车队赞助商对此表示不满。',
+    type: 'media',
+    options: [
+      { label: 'A', text: '道歉并承诺专注比赛', effect: { mediaRep: 3, teamTrust: 3, fanPop: -2 } },
+      { label: 'B', text: '无所谓 - 我的私生活我做主', effect: { fanPop: 5, mediaRep: -4, teamTrust: -4, sponsorRep: -3 } },
+      { label: 'C', text: '邀请媒体来训练基地 - 展示职业态度', effect: { mediaRep: 5, fanPop: 3, consistency: 1 } },
+    ],
+  },
+  {
+    title: '🎙️ 名嘴批评',
+    desc: '知名F1评论员在直播中公开批评你的驾驶风格"过于鲁莽"，引发热议。',
+    type: 'media',
+    options: [
+      { label: 'A', text: '虚心接受 - 下场证明自己', effect: { consistency: 3, raceIQ: 2, mediaRep: 3 } },
+      { label: 'B', text: '反唇相讥 - 他懂什么赛车？', effect: { mediaRep: -3, fanPop: 4, driverRep: 2, attack: 2 } },
+      { label: 'C', text: '邀请他坐车队墙 - 看看真实数据', effect: { mediaRep: 5, raceIQ: 1, teamTrust: 2 } },
+    ],
+  },
+  {
+    title: '📱 社交媒体风暴',
+    desc: '你在社交媒体上的一条动态引发巨大争议，24小时内登上热搜。',
+    type: 'media',
+    options: [
+      { label: 'A', text: '删除动态并道歉 - 危机公关', effect: { mediaRep: 3, fanPop: -3, teamTrust: 2 } },
+      { label: 'B', text: '坚持立场 - 不删除', effect: { fanPop: 7, mediaRep: -4, driverRep: 3, sponsorRep: -2 } },
+      { label: 'C', text: '发长文解释来龙去脉', effect: { mediaRep: 4, fanPop: 2, raceIQ: 1 } },
+    ],
+  },
+  // === 赛道戏剧性事件 ===
+  {
+    title: '💥 前方连环碰撞',
+    desc: '前方多车连环碰撞！赛道上到处都是碎片，红旗中断比赛！',
+    type: 'chaos',
+    options: [
+      { label: 'A', text: '利用中断时间调整策略 - 重整旗鼓', effect: { raceIQ: 4, consistency: 2 } },
+      { label: 'B', text: '重启后全力进攻 - 趁乱超车', effect: { pace: 4, attack: 3, risk: 4 } },
+      { label: 'C', text: '保守起步重启 - 避免二次事故', effect: { consistency: 4, defend: 2, pace: -2 } },
+    ],
+  },
+  {
+    title: '🌧️ 突降暴雨',
+    desc: '天气突变！大雨倾盆而下，赛道瞬间变成溜冰场，多辆赛车打滑！',
+    type: 'chaos',
+    options: [
+      { label: 'A', text: '立即进站换全雨胎 - 雨战大师时间！', effect: { wet: 5, pace: 3, raceIQ: 2 } },
+      { label: 'B', text: '继续用半雨胎 - 赌雨不会持续', effect: { pace: -2, risk: 5, wet: 2 } },
+      { label: 'C', text: '减速保守 - 先活下来再说', effect: { consistency: 3, wet: 1, pace: -3 } },
+    ],
+  },
+  {
+    title: '🔧 技术故障',
+    desc: '你的方向盘按钮突然失灵！DRS无法开启，变速箱也出现异常。',
+    type: 'chaos',
+    options: [
+      { label: 'A', text: '手动操作绕过故障 - 硬核驾驶', effect: { raceIQ: 4, pace: -1, consistency: 2 } },
+      { label: 'B', text: '进站维修 - 损失时间但修好', effect: { pace: -4, consistency: 3, raceIQ: 1 } },
+      { label: 'C', text: '无视故障继续跑 - 纯靠技术！', effect: { pace: 2, risk: 4, attack: 3 } },
+    ],
+  },
+  {
+    title: '🃏 虚晃一枪',
+    desc: '后车在你的镜子里疯狂闪灯，看起来要超车，但你不确定是不是假动作。',
+    type: 'chaos',
+    options: [
+      { label: 'A', text: '防守内线 - 不给他机会', effect: { defend: 4, raceIQ: 2, pace: -1 } },
+      { label: 'B', text: '放他过去 - 然后用尾流反超', effect: { raceIQ: 4, attack: 3, pace: 1 } },
+      { label: 'C', text: '忽左忽右 - 迷惑对手', effect: { defend: 2, raceIQ: 1, risk: 3 } },
+    ],
+  },
+  {
+    title: '🏁 最后圈混乱',
+    desc: '最后一圈！前车突然失误，你看到了胜利的曙光，但后车也咬得很紧！',
+    type: 'chaos',
+    options: [
+      { label: 'A', text: '全力进攻前车 - 豪赌最后弯道！', effect: { attack: 6, pace: 4, risk: 5, consistency: -3 } },
+      { label: 'B', text: '防守后车 - 保住当前位置', effect: { defend: 5, consistency: 3, pace: -1 } },
+      { label: 'C', text: '等待机会 - 如果前车失误就超', effect: { raceIQ: 4, consistency: 2, pace: 1 } },
+    ],
+  },
+  // === 围场八卦 ===
+  {
+    title: '🤫 转会传闻',
+    desc: '围场盛传你正在与另一支车队秘密谈判转会，你的队友和车队都坐不住了。',
+    type: 'paddock',
+    options: [
+      { label: 'A', text: '公开否认 - 专注当前赛季', effect: { teamTrust: 5, mediaRep: 2, consistency: 2 } },
+      { label: 'B', text: '暧昧回应 - 让传闻继续发酵', effect: { mediaRep: -2, fanPop: 4, teamTrust: -6, pace: 2 } },
+      { label: 'C', text: '要求经纪人处理 - 不让分心', effect: { raceIQ: 3, consistency: 2, mediaRep: 1 } },
+    ],
+  },
+  {
+    title: '👴 传奇点评',
+    desc: '一位F1传奇车手在采访中点名评价你："他有天赋，但还需要磨练。"',
+    type: 'paddock',
+    options: [
+      { label: 'A', text: '虚心接受指点 - 传奇说的对', effect: { raceIQ: 4, consistency: 2, driverRep: 4 } },
+      { label: 'B', text: '不甘示弱 - 下场用冠军回应', effect: { pace: 4, attack: 3, driverRep: 2, risk: 2 } },
+      { label: 'C', text: '邀请他做导师 - 虚心求教', effect: { raceIQ: 5, driverRep: 6, mediaRep: 3 } },
+    ],
+  },
+  {
+    title: '🏎️ 赞助商施压',
+    desc: '车队的主要赞助商直接向老板施压，要求你必须在下一站登上领奖台。',
+    type: 'paddock',
+    options: [
+      { label: 'A', text: '接受挑战 - 压力就是动力', effect: { pace: 4, attack: 2, risk: 3, consistency: -1 } },
+      { label: 'B', text: '与管理层沟通 - 设定合理目标', effect: { teamTrust: 3, raceIQ: 2, mediaRep: 2 } },
+      { label: 'C', text: '在采访中回击赞助商 - 赛车不是做生意', effect: { fanPop: 6, mediaRep: -3, sponsorRep: -5, teamTrust: -4 } },
+    ],
+  },
 ];
 
 // ============ RACE DECISIONS ============
@@ -1238,7 +1403,7 @@ function getRaceDecisions(raceIdx, state) {
     ],
   });
 
-  // Segment 2: Weather-dependent OR random event (50% chance)
+  // Segment 2: Weather-dependent OR random event (70% chance)
   if (weather.wetMod > 0.2) {
     allDecisions.push({
       segment: 2,
@@ -1250,8 +1415,8 @@ function getRaceDecisions(raceIdx, state) {
         { label: 'C', text: '等一圈再看情况', effect: { pace: 0, risk: 1 } },
       ],
     });
-  } else if (Math.random() < 0.5) {
-    // 50% chance to get a random event instead of the standard overtake decision
+  } else if (Math.random() < 0.7) {
+    // 70% chance to get a random event instead of the standard overtake decision
     const randomEvent = RANDOM_EVENTS[Math.floor(Math.random() * RANDOM_EVENTS.length)];
     allDecisions.push({
       segment: 2,
@@ -1259,6 +1424,7 @@ function getRaceDecisions(raceIdx, state) {
       desc: randomEvent.desc,
       options: randomEvent.options,
       isRandomEvent: true,
+      eventType: randomEvent.type,
     });
   } else {
     allDecisions.push({
@@ -1285,16 +1451,19 @@ function getRaceDecisions(raceIdx, state) {
     ],
   });
 
-  // Segment 4: Late race decision - randomly choose between final sprint or another random event
-  if (Math.random() < 0.3) {
-    // 30% chance for a second random event
-    const randomEvent = RANDOM_EVENTS[Math.floor(Math.random() * RANDOM_EVENTS.length)];
+  // Segment 4: Late race decision - 60% chance for a second random event (different from segment 2)
+  const usedEventTypes = allDecisions.filter(d => d.isRandomEvent).map(d => d.eventType);
+  const availableEvents = RANDOM_EVENTS.filter(e => !usedEventTypes.includes(e.type) || RANDOM_EVENTS.length <= usedEventTypes.length);
+  if (Math.random() < 0.6 && availableEvents.length > 0) {
+    // 60% chance for a second random event
+    const randomEvent = availableEvents[Math.floor(Math.random() * availableEvents.length)];
     allDecisions.push({
       segment: 4,
       title: randomEvent.title,
       desc: randomEvent.desc,
       options: randomEvent.options,
       isRandomEvent: true,
+      eventType: randomEvent.type,
     });
   } else {
     allDecisions.push({
