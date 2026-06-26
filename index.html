@@ -1363,7 +1363,7 @@ function createNewGame(name, backgroundId, selectedTeamIdx) {
   const team = TEAMS[teamIdx];
 
   // Base stats
-  const baseStats = { pace: 75, consistency: 75, wet: 72, defend: 73, attack: 74, raceIQ: 73 };
+  const baseStats = { pace: 80, consistency: 80, wet: 77, defend: 78, attack: 79, raceIQ: 78 };
 
   // Apply background modifiers
   const stats = {};
@@ -1537,21 +1537,26 @@ function simulateRaceSegment(segIdx, totalSegs, driver, track, weather, modifier
   let score;
 
   if (driver.isPlayer) {
-    score = s.pace * 0.25 +
-            s.consistency * 0.2 +
-            s.wet * weather.wetMod * 0.15 +
+    score = s.pace * 0.22 +
+            s.consistency * 0.18 +
+            s.wet * weather.wetMod * 0.12 +
             s.raceIQ * 0.15 +
             s.attack * 0.1 +
             s.defend * 0.05 +
-            getTeamCar() * 0.1;
+            getTeamCar() * 0.18;
 
-    // Apply modifiers from decisions
+    // Apply modifiers from decisions (amplified for player)
     if (modifiers) {
-      score += (modifiers.pace || 0) * 2;
-      score += (modifiers.raceIQ || 0) * 1.5;
-      score += (modifiers.attack || 0) * 1;
-      score -= (modifiers.tireWear || 0) * (segIdx / totalSegs) * 2;
+      score += (modifiers.pace || 0) * 3;
+      score += (modifiers.raceIQ || 0) * 2.5;
+      score += (modifiers.attack || 0) * 2;
+      score += (modifiers.defend || 0) * 2;
+      score += (modifiers.consistency || 0) * 2;
+      score -= (modifiers.tireWear || 0) * (segIdx / totalSegs) * 1.5;
     }
+
+    // Player gets a small skill bonus to make the game more fun
+    score += 3;
   } else {
     score = (s.pace || 75) * 0.25 +
             (s.consistency || 75) * 0.2 +
@@ -1562,15 +1567,18 @@ function simulateRaceSegment(segIdx, totalSegs, driver, track, weather, modifier
             getCarForTeam(driver.teamIdx) * 0.1;
   }
 
-  // Randomness
-  score += (Math.random() - 0.5) * 12;
+  // Randomness (reduced for player)
+  const randRange = driver.isPlayer ? 8 : 12;
+  score += (Math.random() - 0.5) * randRange;
 
   // Weather chaos
   score += (Math.random() - 0.5) * weather.chaosMod * 30;
 
-  // DNF check (based on consistency)
+  // DNF check (based on consistency, lower chance for player)
   const consistency = driver.isPlayer ? s.consistency : (s.consistency || 75);
-  const dnfChance = Math.max(0.005, (100 - consistency) / 1000);
+  const dnfChance = driver.isPlayer
+    ? Math.max(0.003, (100 - consistency) / 1200)
+    : Math.max(0.005, (100 - consistency) / 1000);
   if (Math.random() < dnfChance && segIdx === totalSegs - 1) {
     return { score: -100, dnf: true };
   }
@@ -1714,7 +1722,7 @@ function applyDecisionEffects(effects) {
 function train(statKey) {
   if (gameState.trainedThisWeek) return false;
 
-  const gain = 2 + Math.floor(Math.random() * 3); // 2-4
+  const gain = 4 + Math.floor(Math.random() * 4); // 4-7
   const otherKeys = Object.keys(gameState.stats).filter(k => k !== statKey);
   const lossKey = otherKeys[Math.floor(Math.random() * otherKeys.length)];
 
@@ -2218,7 +2226,7 @@ function renderTraining() {
             <div class="train-name">${STAT_NAMES[key]}</div>
             <div class="train-effect">
               当前: <strong style="color:${STAT_COLORS[key]}">${gameState.stats[key]}</strong>
-              → 预计提升至 <strong style="color:var(--green)">${gameState.stats[key] + 2}~${gameState.stats[key] + 4}</strong>
+              → 预计提升至 <strong style="color:var(--green)">${gameState.stats[key] + 4}~${gameState.stats[key] + 7}</strong>
               · 随机另一属性 -1
             </div>
           </div>
